@@ -13,14 +13,10 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KStreamBuilder;
 import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.ValueMapper;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
-import static dk.schumacher.avro.Constants.CUSTOMER_SCHEMA2;
 import static dk.schumacher.avro.Messages.*;
 
 
@@ -110,8 +106,8 @@ public class POCKafkaStreams {
          * CLAIM
          ****************************************************************************************************/
 
-        KTable<String, ClaimList> claimStrGrouped = claimStream             // Grouped by CLAIMNUMBER
-                .groupBy((k, claim) -> claim.CLAIMNUMBER, stringSerde, claimMessageSerde)
+        KTable<Integer, ClaimList> claimStrGrouped = claimStream             // Grouped by CLAIMNUMBER ==> NOW GROUPED BY POLICY
+                .groupBy((k, claim) -> claim.getPolicy(), integerSerde, claimMessageSerde)
                 .aggregate(ClaimList::new, (claimKey, claimMsg, claimLst) -> {
                     claimLst.claimRecords.add(claimMsg);
                     return (claimLst);
@@ -121,8 +117,8 @@ public class POCKafkaStreams {
          * PAYMENT
          ****************************************************************************************************/
 
-        KTable<String, PaymentList> paymentGrouped = paymentStream             // Grouped by CLAIMNUMBER
-                .groupBy((k, payment) -> payment.CLAIMNUMBER, stringSerde, paymentMessageSerde)
+        KTable<Integer, PaymentList> paymentGrouped = paymentStream             // Grouped by CLAIMNUMBER ==> NOW GROUPED BY POLICY
+                .groupBy((k, payment) -> payment.getPolicy(), integerSerde, paymentMessageSerde)
                 .aggregate(PaymentList::new, (payKey, payMsg, payLst) -> {
 
                     payLst.paymentRecords.add(payMsg);
@@ -136,28 +132,19 @@ public class POCKafkaStreams {
         KTable<Integer, CustomerAndPolicy> customerAndPolicyGroupedKTable = customerGrouped.join(policyGrouped,
                 (customer, policy) -> new CustomerAndPolicy(customer, policy));
 
-        KTable<String, ClaimAndPayment> claimAndPaymentKTable = claimStrGrouped.leftJoin(paymentGrouped,
+        KTable<Integer, ClaimAndPayment> claimAndPaymentKTable = claimStrGrouped.leftJoin(paymentGrouped,
                 (claim, payment) -> new ClaimAndPayment(claim, payment));
 
         /****************************************************************************************************
-         * REMAPPING
+         * REMAPPING   --  REMOVED !!!!!
          ****************************************************************************************************/
 
-        KStream<String, ClaimAndPayment> claimAndPaymentKStream = claimAndPaymentKTable.toStream();
 
-        KTable<Integer, ClaimAndPayment2> claimAndPayment2IntGroupedTable = claimAndPaymentKStream
-                .groupBy((k, claimPay) -> (claimPay != null)
-                        ? Integer.parseInt(claimPay.claimList.claimRecords.get(0).CLAIMNUMBER.split("_")[0])
-                        : 999, integerSerde, claimAndPaymentSerde)
-                .aggregate(ClaimAndPayment2::new, (claimKey, claimPay, claimAndPay2) -> {
-                    claimAndPay2.add(claimPay);
-                    return claimAndPay2;
-                }, claimAndPayment2Serde, CLAIM_AND_PAYMENT_STORE);
         /****************************************************************************************************
          * FINAL JOIN
          ****************************************************************************************************/
         KTable<Integer, CustomerPolicyClaimPayment> allJoinedAndCoGrouped = customerAndPolicyGroupedKTable.leftJoin(
-                claimAndPayment2IntGroupedTable, (left, right) -> new CustomerPolicyClaimPayment(left, right));
+                claimAndPaymentKTable, (left, right) -> new CustomerPolicyClaimPayment(left, right));
 
         /****************************************************************************************************
          * KEY TRANSFORMATON
@@ -172,16 +159,17 @@ public class POCKafkaStreams {
             for (PolicyMessage policy : all.customerAndPolicy.policyList.policyRecords) {
                 view.policyRecords.add(policy);
             }
-            if (all.claimAndPayment2 != null) {
-                for (ClaimAndPayment claimAndPayment : all.claimAndPayment2.claimAndPaymentMap.values()) {
+            if (all.claimAndPayment != null) {
 
-                    for (ClaimMessage claim : claimAndPayment.claimList.claimRecords) {
+                if(all.claimAndPayment.claimList != null) {
+                    for (ClaimMessage claim : all.claimAndPayment.claimList.claimRecords) {
                         view.claimRecords.add(claim);
                     }
-                    if (claimAndPayment.paymentList != null) {
-                        for (PaymentMessage payment : claimAndPayment.paymentList.paymentRecords) {
-                            view.paymentRecords.add(payment);
-                        }
+                }
+
+                if(all.claimAndPayment.paymentList != null) {
+                    for (PaymentMessage pay : all.claimAndPayment.paymentList.paymentRecords) {
+                        view.paymentRecords.add(pay);
                     }
                 }
             }

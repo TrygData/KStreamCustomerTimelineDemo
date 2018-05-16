@@ -1,5 +1,6 @@
 package dk.schumacher.avro;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -57,11 +58,16 @@ public class Messages {
         }
     }
 
+    @JsonIgnoreProperties({ "policy" })
     static public class ClaimMessage {
         public Double CLAIMTIME;
         public String CLAIMNUMBER;
         public Double CLAIMREPORTTIME;
         public String CLAIMCOUNTER;
+
+        public int getPolicy() {
+            return Integer.parseInt(CLAIMNUMBER.split("_")[0]);
+        }
     }
 
     static public class ClaimList {
@@ -75,11 +81,16 @@ public class Messages {
 
 
 
+    @JsonIgnoreProperties({ "policy" })
     static public class PaymentMessage {
         public Double PAYMENT;
         public Double PAYTIME;
         public Integer CLAIMCOUNTER;
         public String CLAIMNUMBER;
+
+        public int getPolicy() {
+            return Integer.parseInt(CLAIMNUMBER.split("_")[0]);
+        }
     }
 
     static public class PaymentList {
@@ -138,14 +149,14 @@ public class Messages {
 
     static public class CustomerPolicyClaimPayment {
         public CustomerAndPolicy customerAndPolicy = new CustomerAndPolicy();
-        public ClaimAndPayment2 claimAndPayment2 = new ClaimAndPayment2();
+        public ClaimAndPayment claimAndPayment = new ClaimAndPayment();
 
         public CustomerPolicyClaimPayment() {
         }
 
-        public CustomerPolicyClaimPayment(CustomerAndPolicy customerAndPolicy, ClaimAndPayment2 claimAndPayment2) {
+        public CustomerPolicyClaimPayment(CustomerAndPolicy customerAndPolicy, ClaimAndPayment claimAndPayment) {
             this.customerAndPolicy = customerAndPolicy;
-            this.claimAndPayment2 = claimAndPayment2;
+            this.claimAndPayment = claimAndPayment;
         }
     }
 
