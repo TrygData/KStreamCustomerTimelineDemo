@@ -62,7 +62,7 @@ public class POCKafkaStreams {
         KTable<Integer, CustomerList> customerGrouped = customerStream              // Grouped by POLICY
                 .groupBy((key, value) -> Integer.parseInt(value.POLICY), integerSerde, customerMessageSerde)
                 .aggregate(CustomerList::new, (ckey, custMessage, customerList) -> {
-                    customerList.customerRecords.add(custMessage);
+                    customerList.add(custMessage);
                     return customerList;
                 }, customerListSerde, CUSTOMER_STORE);
         customerGrouped.print();
@@ -74,7 +74,7 @@ public class POCKafkaStreams {
         KTable<Integer, PolicyList> policyGrouped = policyStream                    // Grouped by POLICY
                 .groupBy((k, policy) -> policy.POLICY, integerSerde, policyMessageSerde)
                 .aggregate(PolicyList::new, (policyKey, policyMsg, policyLst) -> {
-                    policyLst.policyRecords.add(policyMsg);
+                    policyLst.add(policyMsg);
                     return (policyLst);
                 }, policyListSerde, POLICY_STORE);
 
@@ -85,7 +85,7 @@ public class POCKafkaStreams {
         KTable<Integer, ClaimList> claimStrGrouped = claimStream             // Grouped by CLAIMNUMBER ==> NOW GROUPED BY POLICY
                 .groupBy((k, claim) -> claim.getPolicy(), integerSerde, claimMessageSerde)
                 .aggregate(ClaimList::new, (claimKey, claimMsg, claimLst) -> {
-                    claimLst.claimRecords.add(claimMsg);
+                    claimLst.add(claimMsg);
                     return (claimLst);
                 }, claimListSerde, CLAIM_STORE);
 
@@ -97,7 +97,7 @@ public class POCKafkaStreams {
                 .groupBy((k, payment) -> payment.getPolicy(), integerSerde, paymentMessageSerde)
                 .aggregate(PaymentList::new, (payKey, payMsg, payLst) -> {
 
-                    payLst.paymentRecords.add(payMsg);
+                    payLst.add(payMsg);
                     return (payLst);
                 }, paymentListSerde, PAYMENT_STORE);
 
@@ -126,27 +126,17 @@ public class POCKafkaStreams {
          * KEY TRANSFORMATON
          ****************************************************************************************************/
         KTable<Integer, CustomerView> customerView = allJoinedAndCoGrouped.<CustomerView>mapValues((all) -> {
-            CustomerView view = new CustomerView();
-            view.cutomerKey = Integer.parseInt(
-                    all.customerAndPolicy.customerList.customerRecords.get(0).CUSTOMER.replaceFirst("cust", ""));
-            for (CustomerMessage customer : all.customerAndPolicy.customerList.customerRecords) {
-                view.customerRecords.add(customer);
-            }
-            for (PolicyMessage policy : all.customerAndPolicy.policyList.policyRecords) {
-                view.policyRecords.add(policy);
-            }
+            CustomerView view = new CustomerView(Integer.parseInt(
+                    all.customerAndPolicy.customerList.get(0).CUSTOMER.replaceFirst("cust", "")));
+                view.customerRecords.addAll(all.customerAndPolicy.customerList);
+                view.policyRecords.addAll(all.customerAndPolicy.policyList);
             if (all.claimAndPayment != null) {
-
                 if(all.claimAndPayment.claimList != null) {
-                    for (ClaimMessage claim : all.claimAndPayment.claimList.claimRecords) {
-                        view.claimRecords.add(claim);
-                    }
+                        view.claimRecords.addAll(all.claimAndPayment.claimList);
                 }
 
                 if(all.claimAndPayment.paymentList != null) {
-                    for (PaymentMessage pay : all.claimAndPayment.paymentList.paymentRecords) {
-                        view.paymentRecords.add(pay);
-                    }
+                        view.paymentRecords.addAll(all.claimAndPayment.paymentList);
                 }
             }
             return view;
@@ -162,7 +152,7 @@ public class POCKafkaStreams {
 
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.cleanUp();
-        kafkaStreams.start();
+         kafkaStreams.start();
     }
 
     private static Properties streamProperties(String bootstrapServers, String schemaRegistryUrl) {

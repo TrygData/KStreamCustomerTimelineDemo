@@ -48,20 +48,9 @@ public class Messages {
         public int PVAR0;
     }
 
-    static public class CustomerList {
-        public ArrayList<CustomerMessage> customerRecords = new ArrayList<>();
-        String s = new String();
+    static public class CustomerList extends ArrayList<CustomerMessage>{};
 
-        public CustomerList() {
-        }
-    }
-
-    static public class PolicyList {
-        public ArrayList<PolicyMessage> policyRecords = new ArrayList<>();
-
-        public PolicyList() {
-        }
-    }
+    static public class PolicyList extends ArrayList<PolicyMessage>{};
 
     @JsonIgnoreProperties({ "policy" })
     static public class ClaimMessage {
@@ -75,12 +64,7 @@ public class Messages {
         }
     }
 
-    static public class ClaimList {
-        public ArrayList<ClaimMessage> claimRecords = new ArrayList<>();
-
-        public ClaimList() {
-        }
-    }
+    static public class ClaimList extends ArrayList<ClaimMessage>{};
 
     @JsonIgnoreProperties({ "policy" })
     static public class PaymentMessage {
@@ -94,21 +78,16 @@ public class Messages {
         }
     }
 
-    static public class PaymentList {
-        public ArrayList<PaymentMessage> paymentRecords = new ArrayList<>();
-
-        public PaymentList() {
-        }
-    }
+    static public class PaymentList extends ArrayList<PaymentMessage>{};
 
     static public class CustomerAndPolicy {
-        public CustomerList customerList = new CustomerList();
-        public PolicyList policyList = new PolicyList();
+        public ArrayList<CustomerMessage> customerList = new ArrayList<>();
+        public ArrayList<PolicyMessage> policyList = new ArrayList<>();
 
         public CustomerAndPolicy() {
         }
 
-        public CustomerAndPolicy(CustomerList customerList, PolicyList policyList) {
+        public CustomerAndPolicy(ArrayList<CustomerMessage> customerList, ArrayList<PolicyMessage> policyList) {
             this.customerList = customerList;
             this.policyList = policyList;
         }
@@ -116,13 +95,13 @@ public class Messages {
     }
 
     static public class ClaimAndPayment {
-        public ClaimList claimList = new ClaimList();
-        public PaymentList paymentList = new PaymentList();
+        public ArrayList<ClaimMessage> claimList = new ArrayList<>();
+        public ArrayList<PaymentMessage> paymentList = new ArrayList<>();
 
         public ClaimAndPayment() {
         }
 
-        public ClaimAndPayment(ClaimList claimList, PaymentList paymentList) {
+        public ClaimAndPayment(ArrayList<ClaimMessage> claimList, ArrayList<PaymentMessage> paymentList) {
             this.claimList = claimList;
             this.paymentList = paymentList;
         }
@@ -133,27 +112,11 @@ public class Messages {
 
         public ClaimAndPayment2() {
         }
-
-        public void add(final ClaimAndPayment claimAndPaymentMessage) {
-            String key = claimAndPaymentMessage.claimList.claimRecords.get(0).CLAIMNUMBER
-                    + claimAndPaymentMessage.claimList.claimRecords.get(0).CLAIMTIME.toString();
-            if (claimAndPaymentMap.containsKey(key)) {
-                remove(key);
-            }
-            claimAndPaymentMap.put(key, claimAndPaymentMessage);
-        }
-
-        private void remove(final String key) {
-            claimAndPaymentMap.remove(key);
-        }
     }
 
     static public class CustomerPolicyClaimPayment {
         public CustomerAndPolicy customerAndPolicy = new CustomerAndPolicy();
         public ClaimAndPayment claimAndPayment = new ClaimAndPayment();
-
-        public CustomerPolicyClaimPayment() {
-        }
 
         public CustomerPolicyClaimPayment(CustomerAndPolicy customerAndPolicy, ClaimAndPayment claimAndPayment) {
             this.customerAndPolicy = customerAndPolicy;
@@ -162,14 +125,30 @@ public class Messages {
     }
 
     static public class CustomerView {
-        public int cutomerKey;
+        public int customerKey;
         public ArrayList<CustomerMessage> customerRecords = new ArrayList<>();
         public ArrayList<PolicyMessage> policyRecords = new ArrayList<>();
         public ArrayList<ClaimMessage> claimRecords = new ArrayList<>();
         public ArrayList<PaymentMessage> paymentRecords = new ArrayList<>();
 
-        public CustomerView() {
+        public CustomerView(){}
+
+        public CustomerView(int customerKey) {
+            this.customerKey = customerKey;
         }
+    }
+
+     static <T> Serde createSerde(T clazz, Map<String, Object> serdeProps) {
+        Serializer<T> serializer = new JsonPOJOSerializer<T>();
+
+        serdeProps.put("JsonPOJOClass", clazz);
+        serializer.configure(serdeProps, false);
+
+        final Deserializer<T> deserializer = new JsonPOJODeserializer<T>();
+        serdeProps.put("JsonPOJOClass", clazz);
+        deserializer.configure(serdeProps, false);
+        return Serdes.serdeFrom(serializer, deserializer);
+
     }
 
     /************************************************************************
@@ -177,141 +156,24 @@ public class Messages {
      ************************************************************************/
 
     static {
-        // define CustomerMessageSerde
+
         Map<String, Object> serdeProps = new HashMap<String, Object>();
-        Serializer<CustomerMessage> customerMessageSerializer = new JsonPOJOSerializer<CustomerMessage>();
 
-        serdeProps.put("JsonPOJOClass", CustomerMessage.class);
-        customerMessageSerializer.configure(serdeProps, false);
-
-        final Deserializer<CustomerMessage> customerMessageDeserializer = new JsonPOJODeserializer<CustomerMessage>();
-        serdeProps.put("JsonPOJOClass", CustomerMessage.class);
-        customerMessageDeserializer.configure(serdeProps, false);
-        customerMessageSerde = Serdes.serdeFrom(customerMessageSerializer,
-                customerMessageDeserializer);
-
-
-        // define customerListSerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<CustomerList> customerListSerializer = new JsonPOJOSerializer<CustomerList>();
-        serdeProps.put("JsonPOJOClass", CustomerList.class);
-        customerListSerializer.configure(serdeProps, false);
-
-        final Deserializer<CustomerList> customerListDeserializer = new JsonPOJODeserializer<CustomerList>();
-        serdeProps.put("JsonPOJOClass", CustomerList.class);
-        customerListDeserializer.configure(serdeProps, false);
-        customerListSerde = Serdes.serdeFrom(customerListSerializer,
-                customerListDeserializer);
-
-        // define policySerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<PolicyMessage> policyMessageSerializer = new JsonPOJOSerializer<PolicyMessage>();
-        serdeProps.put("JsonPOJOClass", PolicyMessage.class);
-        policyMessageSerializer.configure(serdeProps, false);
-
-        final Deserializer<PolicyMessage> policyMessageDeserializer = new JsonPOJODeserializer<PolicyMessage>();
-        serdeProps.put("JsonPOJOClass", PolicyMessage.class);
-        policyMessageDeserializer.configure(serdeProps, false);
-        policyMessageSerde = Serdes.serdeFrom(policyMessageSerializer,
-                policyMessageDeserializer);
-
-
-        // define policyListSerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<PolicyList> policyListSerializer = new JsonPOJOSerializer<PolicyList>();
-        serdeProps.put("JsonPOJOClass", PolicyList.class);
-        policyListSerializer.configure(serdeProps, false);
-
-        final Deserializer<PolicyList> policyListDeserializer = new JsonPOJODeserializer<PolicyList>();
-        serdeProps.put("JsonPOJOClass", PolicyList.class);
-        policyListDeserializer.configure(serdeProps, false);
-        policyListSerde = Serdes.serdeFrom(policyListSerializer, policyListDeserializer);
-
-        // define claimMessageSerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<ClaimMessage> claimMessageSerializer = new JsonPOJOSerializer<ClaimMessage>();
-        serdeProps.put("JsonPOJOClass", ClaimMessage.class);
-        claimMessageSerializer.configure(serdeProps, false);
-
-        final Deserializer<ClaimMessage> claimMessageDeserializer = new JsonPOJODeserializer<ClaimMessage>();
-        serdeProps.put("JsonPOJOClass", ClaimMessage.class);
-        claimMessageDeserializer.configure(serdeProps, false);
-        claimMessageSerde = Serdes.serdeFrom(claimMessageSerializer,
-                claimMessageDeserializer);
-
-        // define claimListSerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<ClaimList> claimListSerializer = new JsonPOJOSerializer<ClaimList>();
-        serdeProps.put("JsonPOJOClass", ClaimList.class);
-        claimListSerializer.configure(serdeProps, false);
-
-        final Deserializer<ClaimList> claimListDeserializer = new JsonPOJODeserializer<ClaimList>();
-        serdeProps.put("JsonPOJOClass", ClaimList.class);
-        claimListDeserializer.configure(serdeProps, false);
-        claimListSerde = Serdes.serdeFrom(claimListSerializer, claimListDeserializer);
-
-        // define paymentSerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<PaymentMessage> paymentMessageSerializer = new JsonPOJOSerializer<PaymentMessage>();
-        serdeProps.put("JsonPOJOClass", PaymentMessage.class);
-        paymentMessageSerializer.configure(serdeProps, false);
-
-        final Deserializer<PaymentMessage> paymentMessageDeserializer = new JsonPOJODeserializer<PaymentMessage>();
-        serdeProps.put("JsonPOJOClass", PaymentMessage.class);
-        paymentMessageDeserializer.configure(serdeProps, false);
-        paymentMessageSerde = Serdes.serdeFrom(paymentMessageSerializer,
-                paymentMessageDeserializer);
-
-        // define paymentListSerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<PaymentList> paymentListSerializer = new JsonPOJOSerializer<PaymentList>();
-        serdeProps.put("JsonPOJOClass", PaymentList.class);
-        paymentListSerializer.configure(serdeProps, false);
-
-        final Deserializer<PaymentList> paymentListDeserializer = new JsonPOJODeserializer<PaymentList>();
-        serdeProps.put("JsonPOJOClass", PaymentList.class);
-        paymentListDeserializer.configure(serdeProps, false);
-        paymentListSerde = Serdes.serdeFrom(paymentListSerializer, paymentListDeserializer);
-
+        customerMessageSerde = createSerde(CustomerMessage.class, serdeProps);
+        customerListSerde = createSerde(CustomerList.class, serdeProps);
+        policyMessageSerde = createSerde(PolicyMessage.class, serdeProps);
+        policyListSerde = createSerde(PolicyList.class, serdeProps);
+        claimMessageSerde = createSerde(ClaimMessage.class, serdeProps);
+        claimListSerde = createSerde(ClaimList.class, serdeProps);
+        paymentMessageSerde = createSerde(PaymentMessage.class, serdeProps);
+        paymentListSerde = createSerde(PaymentList.class, serdeProps);
 
         /************************************************************************
          * NESTED
          ************************************************************************/
 
-        // define claimAndPaymentSerde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<ClaimAndPayment> claimAndPaymentSerializer = new JsonPOJOSerializer<ClaimAndPayment>();
-        serdeProps.put("JsonPOJOClass", ClaimAndPayment.class);
-        claimAndPaymentSerializer.configure(serdeProps, false);
-
-        final Deserializer<ClaimAndPayment> claimAndPaymentDeserializer = new JsonPOJODeserializer<ClaimAndPayment>();
-        serdeProps.put("JsonPOJOClass", ClaimAndPayment.class);
-        claimAndPaymentDeserializer.configure(serdeProps, false);
-        claimAndPaymentSerde = Serdes.serdeFrom(claimAndPaymentSerializer,
-                claimAndPaymentDeserializer);
-
-        // define claimAndPayment2Serde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<ClaimAndPayment2> claimAndPayment2Serializer = new JsonPOJOSerializer<ClaimAndPayment2>();
-        serdeProps.put("JsonPOJOClass", ClaimAndPayment2.class);
-        claimAndPayment2Serializer.configure(serdeProps, false);
-
-        final Deserializer<ClaimAndPayment2> claimAndPayment2Deserializer = new JsonPOJODeserializer<ClaimAndPayment2>();
-        serdeProps.put("JsonPOJOClass", ClaimAndPayment2.class);
-        claimAndPayment2Deserializer.configure(serdeProps, false);
-        claimAndPayment2Serde = Serdes.serdeFrom(claimAndPayment2Serializer,
-                claimAndPayment2Deserializer);
-
-        // define customerViewserde
-        serdeProps = new HashMap<String, Object>();
-        final Serializer<CustomerView> customerViewSerializer = new JsonPOJOSerializer<CustomerView>();
-        serdeProps.put("JsonPOJOClass", CustomerView.class);
-        customerViewSerializer.configure(serdeProps, false);
-
-        final Deserializer<CustomerView> customerViewDeserializer = new JsonPOJODeserializer<CustomerView>();
-        serdeProps.put("JsonPOJOClass", CustomerView.class);
-        customerViewDeserializer.configure(serdeProps, false);
-        customerViewSerde = Serdes.serdeFrom(customerViewSerializer,
-                customerViewDeserializer);
+        claimAndPaymentSerde = createSerde(ClaimAndPayment.class, serdeProps);
+        claimAndPayment2Serde = createSerde(ClaimAndPayment2.class, serdeProps);
+        customerViewSerde = createSerde(CustomerView.class, serdeProps);
     }
 }
