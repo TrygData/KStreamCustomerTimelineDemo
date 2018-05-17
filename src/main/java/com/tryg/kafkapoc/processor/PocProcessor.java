@@ -45,40 +45,28 @@ public class PocProcessor {
         KStream<String, PaymentMessage> payments = streamsBuilder.stream(PocConstants.PAYMENT_TOPIC,
                 Consumed.with(Serdes.String(), serdeFactory.getSerde(PaymentMessage.class)));
 
-        KTable<String, List<CustomerMessage>> customerTable = groupAndAggregateInList(
+        KTable<String, GenericDoubleListView<CustomerMessage, PolicyMessage>> customerPolicies = joinTwoStreams(
                 customers,
-                String.class,
-                CustomerMessage.class,
-                CustomerMessage::getPolicy
-        );
-
-        KTable<String, List<PolicyMessage>> policyTable = groupAndAggregateInList(
                 policies,
                 String.class,
+                CustomerMessage.class,
                 PolicyMessage.class,
-                m -> String.valueOf(m.getPolicy())
+                CustomerMessage::getPolicy,
+                policyMessage -> String.valueOf(policyMessage.getPolicy())
         );
 
-        KTable<String, CustomerPolicyView> customerPolicies = customerTable.join(policyTable, CustomerPolicyView::new);
-
-        KTable<String, List<ClaimMessage>> claimTable = groupAndAggregateInList(
+        KTable<String, GenericDoubleListView<ClaimMessage, PaymentMessage>> claimPayments = joinTwoStreams(
                 claims,
-                String.class,
-                ClaimMessage.class,
-                m -> getPolicyNumber(m.getClaimNumber())
-        );
-
-        KTable<String, List<PaymentMessage>> paymentTable = groupAndAggregateInList(
                 payments,
                 String.class,
+                ClaimMessage.class,
                 PaymentMessage.class,
-                m -> getPolicyNumber(m.getClaimNumber())
+                claimMessage -> getPolicyNumber(claimMessage.getClaimNumber()),
+                paymentMessage -> getPolicyNumber(paymentMessage.getClaimNumber())
         );
 
-        KTable<String, ClaimPaymentView> claimPayments = claimTable.join(paymentTable, ClaimPaymentView::new);
-
         KTable<String, CustomerView> customerViews = customerPolicies.join(claimPayments, (value1, value2) ->
-                new CustomerView(value1.getCustomers().get(0).getCustomer(), value1.getCustomers(), value1.getPolicies(), value2.getClaims(), value2.getPayments()));
+                new CustomerView(value1.getList1().get(0).getCustomer(), value1.getList1(), value1.getList2(), value2.getList1(), value2.getList2()));
 
         KStream<String, CustomerView> customerOutStream = customerViews.toStream((key, value) -> value.getCustomerKey());
 
@@ -88,6 +76,15 @@ public class PocProcessor {
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), propsFactory.getFullProperties());
         kafkaStreams.start();
+    }
+
+    private <K, V1, V2> KTable<K, GenericDoubleListView<V1, V2>> joinTwoStreams(KStream<?, V1> stream1, KStream<?, V2> stream2,
+                                                                                Class<K> keyClass, Class<V1> valueClass1, Class<V2> valueClass2,
+                                                                                Function<V1, K> keyFunc1, Function<V2, K> keyFunc2) {
+        KTable<K, List<V1>> table1 = groupAndAggregateInList(stream1, keyClass, valueClass1, keyFunc1);
+        KTable<K, List<V2>> table2 = groupAndAggregateInList(stream2, keyClass, valueClass2, keyFunc2);
+
+        return table1.join(table2, GenericDoubleListView::new);
     }
 
     private <V, K> KTable<K, List<V>> groupAndAggregateInList(KStream<?, V> stream, Class<K> keyClass, Class<V> valueClass, Function<V, K> keyFunc) {

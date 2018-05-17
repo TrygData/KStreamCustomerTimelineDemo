@@ -14,3 +14,12 @@ To execute the POC:
 3. Run PocApplication
 
 The population of the topics can be seen using Kafka-Topic-UI by opening localhost:8000
+
+> I join two streams in the morning  
+> I join two streams at night  
+> I join two streams in the afternoon  
+> It makes me feel alright  
+> I join two streams in time of peace  
+> And two in time of war  
+> I join two streams before I join two streams  
+> And then I join two more  
