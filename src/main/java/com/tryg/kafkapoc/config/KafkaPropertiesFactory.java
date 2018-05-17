@@ -5,11 +5,13 @@ import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.*;
 import org.apache.kafka.streams.StreamsConfig;
+import org.springframework.stereotype.Component;
 
 import java.util.Properties;
 
+@Component
 public class KafkaPropertiesFactory {
-    public static Properties getProducerProperties(Class keyClass, Class valueClass) {
+    public Properties getProducerProperties(Class keyClass, Class valueClass) {
         Properties props = getDefaultProps();
 
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, getSerializerClass(keyClass));
@@ -18,7 +20,7 @@ public class KafkaPropertiesFactory {
         return props;
     }
 
-    public static Properties getFullProperties() {
+    public Properties getFullProperties() {
         Properties props = getDefaultProps();
 
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "POC-1");
@@ -28,7 +30,7 @@ public class KafkaPropertiesFactory {
         return props;
     }
 
-    private static Properties getDefaultProps() {
+    private Properties getDefaultProps() {
         Properties props = new Properties();
 
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "http://localhost:9092");
@@ -37,7 +39,7 @@ public class KafkaPropertiesFactory {
         return props;
     }
 
-    private static Class<? extends Serializer> getSerializerClass(Class classToSerialize) {
+    private Class<? extends Serializer> getSerializerClass(Class classToSerialize) {
         switch (classToSerialize.getSimpleName()) {
             case "Double":
                 return DoubleSerializer.class;

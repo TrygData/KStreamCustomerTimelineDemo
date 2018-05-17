@@ -35,7 +35,7 @@ public class KafkaCustomerFileTopicDispatch {
     }
 
     private <K, V> void sendMessagesFromFile(String topicName, String fileName, Class<V> payloadType, Class<K> keyClass, Function<V, K> keyFunction) throws IOException {
-        Producer producer = new KafkaProducer(KafkaPropertiesFactory.getProducerProperties(keyClass, payloadType));
+        Producer producer = new KafkaProducer(new KafkaPropertiesFactory().getProducerProperties(keyClass, payloadType));
 
         ClassLoader classLoader = getClass().getClassLoader();
         String filePath = BASE_PATH + fileName;
