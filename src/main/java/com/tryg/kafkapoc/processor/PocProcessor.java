@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
@@ -44,42 +45,34 @@ public class PocProcessor {
         KStream<String, PaymentMessage> payments = streamsBuilder.stream(PocConstants.PAYMENT_TOPIC,
                 Consumed.with(Serdes.String(), serdeFactory.getSerde(PaymentMessage.class)));
 
-        KTable<String, CustomerMessageList> customerTable = groupAndAggregateInList(
+        KTable<String, List<CustomerMessage>> customerTable = groupAndAggregateInList(
                 customers,
-                CustomerMessage::getPolicy,
                 String.class,
                 CustomerMessage.class,
-                CustomerMessageList.class,
-                CustomerMessageList::new
+                CustomerMessage::getPolicy
         );
 
-        KTable<String, PolicyMessageList> policyTable = groupAndAggregateInList(
+        KTable<String, List<PolicyMessage>> policyTable = groupAndAggregateInList(
                 policies,
-                m -> String.valueOf(m.getPolicy()),
                 String.class,
                 PolicyMessage.class,
-                PolicyMessageList.class,
-                PolicyMessageList::new
+                m -> String.valueOf(m.getPolicy())
         );
 
         KTable<String, CustomerPolicyView> customerPolicies = customerTable.join(policyTable, CustomerPolicyView::new);
 
-        KTable<String, ClaimMessageList> claimTable = groupAndAggregateInList(
+        KTable<String, List<ClaimMessage>> claimTable = groupAndAggregateInList(
                 claims,
-                m -> getPolicyNumber(m.getClaimNumber()),
                 String.class,
                 ClaimMessage.class,
-                ClaimMessageList.class,
-                ClaimMessageList::new
+                m -> getPolicyNumber(m.getClaimNumber())
         );
 
-        KTable<String, PaymentMessageList> paymentTable = groupAndAggregateInList(
+        KTable<String, List<PaymentMessage>> paymentTable = groupAndAggregateInList(
                 payments,
-                m -> getPolicyNumber(m.getClaimNumber()),
                 String.class,
                 PaymentMessage.class,
-                PaymentMessageList.class,
-                PaymentMessageList::new
+                m -> getPolicyNumber(m.getClaimNumber())
         );
 
         KTable<String, ClaimPaymentView> claimPayments = claimTable.join(paymentTable, ClaimPaymentView::new);
@@ -97,19 +90,18 @@ public class PocProcessor {
         kafkaStreams.start();
     }
 
-    private <V, K, L extends List<V>> KTable<K, L> groupAndAggregateInList(KStream<?, V> stream, Function<V, K> groupByKeyFunction,
-                                                                           Class<K> keyClass, Class<V> valueClass, Class<L> listClass,
-                                                                           Initializer<L> listInitializer) {
+    private <V, K> KTable<K, List<V>> groupAndAggregateInList(KStream<?, V> stream, Class<K> keyClass, Class<V> valueClass, Function<V, K> keyFunc) {
         return stream
-                .groupBy((key, value) -> groupByKeyFunction.apply(value),
+                .groupBy(
+                        (key, value) -> keyFunc.apply(value),
                         Serialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getSerde(valueClass)))
-                .aggregate(listInitializer,
+                .aggregate(
+                        ArrayList::new,
                         (key, value, aggregate) -> {
                             aggregate.add(value);
                             return aggregate;
                         },
-                        Materialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getSerde(listClass))
-                );
+                        Materialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getListSerde(valueClass)));
     }
 
     private String getPolicyNumber(String claimNumber) {

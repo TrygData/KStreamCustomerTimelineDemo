@@ -18,7 +18,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.function.Function;
 
-
 public class KafkaCustomerFileTopicDispatch {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 

@@ -4,6 +4,8 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class SerdeFactory {
 
@@ -13,6 +15,10 @@ public class SerdeFactory {
         } catch (IllegalArgumentException e) { //Proper input validation should be made instead of catching the exception
             return getJsonSerde(targetClass);
         }
+    }
+
+    public <T> Serde<List<T>> getListSerde(Class<T> itemClass) {
+        return Serdes.serdeFrom(new JsonSerializer<>(), new ListDeserializer<>(itemClass));
     }
 
     private <T> Serde<T> getJsonSerde(Class<T> targetClass) {

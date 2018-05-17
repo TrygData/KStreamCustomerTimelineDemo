@@ -17,7 +17,7 @@ public class JsonSerializer<T> implements Serializer<T> {
     }
 
     @Override
-    public void configure(Map<String, ?> props, boolean isKey) {
+    public void configure(Map<String, ?> configs, boolean isKey) {
     }
 
     @Override
@@ -25,7 +25,7 @@ public class JsonSerializer<T> implements Serializer<T> {
         try {
             return data == null ? null : objectMapper.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
-            throw new SerializationException("Error serializing to JSON", e);
+            throw new SerializationException("Error serializing to JSON: " + data, e);
         }
     }
 

@@ -23,8 +23,8 @@ public class JsonDeserializer<T> implements Deserializer<T> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public void configure(Map<String, ?> props, boolean isKey) {
-        targetClass = (Class<T>) props.get("targetClass");
+    public void configure(Map<String, ?> configs, boolean isKey) {
+        targetClass = (Class<T>) configs.get("targetClass");
     }
 
     @Override
