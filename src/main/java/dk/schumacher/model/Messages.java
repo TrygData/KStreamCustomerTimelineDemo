@@ -1,4 +1,4 @@
-package dk.schumacher.avro;
+package dk.schumacher.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.kafka.common.serialization.Deserializer;
@@ -27,6 +27,11 @@ public class Messages {
     public static Serde<ClaimAndPayment> claimAndPaymentSerde;
     public static Serde<ClaimAndPayment2> claimAndPayment2Serde;
     public static Serde<CustomerView> customerViewSerde;
+
+
+    /************************************************************************
+     * MESSAGES
+     ************************************************************************/
 
     static public class CustomerMessage {
         public String ADDRESS;
@@ -76,10 +81,6 @@ public class Messages {
         public ClaimList() {
         }
     }
-
-
-
-
 
     @JsonIgnoreProperties({ "policy" })
     static public class PaymentMessage {
@@ -171,7 +172,9 @@ public class Messages {
         }
     }
 
-
+    /************************************************************************
+     * INITIALIZATION
+     ************************************************************************/
 
     static {
         // define CustomerMessageSerde

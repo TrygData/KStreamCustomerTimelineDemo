@@ -1,7 +1,4 @@
-package dk.schumacher.avro;
-
-import org.apache.avro.Schema;
-import org.json.JSONObject;
+package dk.schumacher.model;
 
 public class Constants {
 

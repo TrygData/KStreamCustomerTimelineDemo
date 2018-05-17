@@ -1,10 +1,6 @@
 package dk.schumacher.poc;
 
-import dk.schumacher.avro.Constants;
-import dk.schumacher.avro.Messages;
-import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
+import dk.schumacher.model.Messages;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -14,15 +10,12 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KStreamBuilder;
 import org.apache.kafka.streams.kstream.KTable;
 
-import java.io.IOException;
 import java.util.Properties;
 
-import static dk.schumacher.avro.Messages.*;
-
+import static dk.schumacher.model.Messages.*;
 
 public class POCKafkaStreams {
 
-    private static final String APP_ID = "KStreamCustomerTimelineDemo1000";
     private static final String CUSTOMER_TOPIC = "STATPEJ.POC_CUSTOMER_DECODED";
     private static final String POLICY_TOPIC = "STATPEJ.POC_POLICY_DECODED";
     protected static final String CLAIM_TOPIC = "STATPEJ.POC_CLAIM_DECODED";
@@ -32,38 +25,21 @@ public class POCKafkaStreams {
     private static final String POLICY_STORE = "PolicyStore";
     private static final String CLAIM_STORE = "ClaimStrStore";
     private static final String PAYMENT_STORE = "PaymentStore";
-    private static final String CLAIM_AND_PAYMENT_STORE = "claimAndPayment2Store";
 
     private static final String CUSTOMER_VIEW_OUT = "CA_DEMO_OUTPUT1";
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) {
 
         final String bootstrapServers = args.length > 0 ? args[0] : "localhost:9092";
         final String schemaRegistryUrl = args.length > 1 ? args[1] : "http://localhost:8081";
-
-//        final Schema customerSchema = org.apache.avro.Schema.createRecord("customer", CUSTOMER_SCHEMA2, "", false);
-//        final Map<String, Schema> schemas = new HashMap<String, Schema>();
-//        schemas.put("", customerSchema);
-//        final Schema.Parser parser = new Schema.Parser();
-//        parser.addTypes(schemas);
-//        System.out.println(Schema.Parser.);
-        final Schema CUSTOMER_SCHEMA2 = Schema.parse(Constants.CUSTOMER_SCHEMA2);
-        final Serde<GenericRecord> valueGenericCustomerSerde = new GenericAvroSerde();
 
         Properties props = streamProperties(bootstrapServers, schemaRegistryUrl);
         System.out.println("Properties: " + props);
         StreamsConfig config = new StreamsConfig(props);
         final Serde<String> stringSerde = Serdes.String();
         final Serde<Integer> integerSerde = Serdes.Integer();
-        final Serde<byte[]> byteArraySerde = Serdes.ByteArray();
 
         KStreamBuilder kStreamBuilder = new KStreamBuilder();
-
-//        KStream<String, String> policyKStream = kStreamBuilder.stream(stringSerde, stringSerde, POLICY_TOPIC);
-
-//        KTable<String, Messages.CustomerMessage> customerKtable = kStreamBuilder.table(stringSerde, customerMessageSerde, CUSTOMER_TOPIC);
-//        customerKtable.print();
-        //customerKtable.groupBy()
 
         /****************************************************************************************************
          * KSTREAMS DEFINITIONS
@@ -184,16 +160,9 @@ public class POCKafkaStreams {
 
         System.out.println("Starting Kafka Streams Customer Demo");
 
-
-
-
-
-
-
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.cleanUp();
         kafkaStreams.start();
-
     }
 
     private static Properties streamProperties(String bootstrapServers, String schemaRegistryUrl) {

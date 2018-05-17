@@ -1,21 +1,20 @@
-package dk.schumacher.avro;
+package dk.schumacher.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.errors.SerializationException;
-import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.Deserializer;
 
 import java.util.Map;
 
-public class JsonPOJOSerializer<T> implements Serializer<T> {
-    private final ObjectMapper objectMapper = new ObjectMapper();
+public class JsonPOJODeserializer<T> implements Deserializer<T> {
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     private Class<T> tClass;
 
     /**
      * Default constructor needed by Kafka
      */
-    public JsonPOJOSerializer() {
-
+    public JsonPOJODeserializer() {
     }
 
     @SuppressWarnings("unchecked")
@@ -25,19 +24,22 @@ public class JsonPOJOSerializer<T> implements Serializer<T> {
     }
 
     @Override
-    public byte[] serialize(String topic, T data) {
-        if (data == null)
+    public T deserialize(String topic, byte[] bytes) {
+        if (bytes == null)
             return null;
 
+        T data;
         try {
-            return objectMapper.writeValueAsBytes(data);
+            data = objectMapper.readValue(bytes, tClass);
         } catch (Exception e) {
-            throw new SerializationException("Error serializing JSON message", e);
+            throw new SerializationException(e);
         }
+
+        return data;
     }
 
     @Override
     public void close() {
-    }
 
+    }
 }
