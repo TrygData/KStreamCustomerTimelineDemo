@@ -55,7 +55,6 @@ public class POCKafkaStreams {
         KStream<Integer, Messages.PaymentMessage> paymentStream = kStreamBuilder.stream(integerSerde, paymentMessageSerde,
                 PAYMENT_TOPIC);
 
-
         /****************************************************************************************************
          * CUSTOMER
          ****************************************************************************************************/
@@ -179,5 +178,4 @@ public class POCKafkaStreams {
 //        settings.put(ProducerConfig.METRICS_RECORDING_LEVEL_CONFIG, LEVEL);
         return settings;
     }
-
 }

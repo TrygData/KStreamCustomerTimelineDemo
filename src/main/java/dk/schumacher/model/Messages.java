@@ -17,56 +17,37 @@ import java.util.Map;
  * @version $Revision$ 16/05/2018
  */
 public class Messages {
+    public static Map<String, Object> serdeProps = new HashMap<String, Object>();
 
-    public static Serde<CustomerMessage> customerMessageSerde;
-    public static Serde<CustomerList> customerListSerde;
-    public static Serde<PolicyMessage> policyMessageSerde;
-    public static Serde<PolicyList> policyListSerde;
-    public static Serde<ClaimMessage> claimMessageSerde;
-    public static Serde<ClaimList> claimListSerde;
-    public static Serde<PaymentMessage> paymentMessageSerde;
-    public static Serde<PaymentList> paymentListSerde;
-    public static Serde<ClaimAndPayment> claimAndPaymentSerde;
-    public static Serde<ClaimAndPayment2> claimAndPayment2Serde;
-    public static Serde<CustomerView> customerViewSerde;
+    public static Serde<CustomerMessage> customerMessageSerde = createSerde(CustomerMessage.class, serdeProps);;
+    public static Serde<CustomerList> customerListSerde = createSerde(CustomerList.class, serdeProps);;
+    public static Serde<PolicyMessage> policyMessageSerde = createSerde(PolicyMessage.class, serdeProps);
+    public static Serde<PolicyList> policyListSerde = createSerde(PolicyList.class, serdeProps);
+    public static Serde<ClaimMessage> claimMessageSerde = createSerde(ClaimMessage.class, serdeProps);
+    public static Serde<ClaimList> claimListSerde  = createSerde(ClaimList.class, serdeProps);
+    public static Serde<PaymentMessage> paymentMessageSerde = createSerde(PaymentMessage.class, serdeProps);
+    public static Serde<PaymentList> paymentListSerde = createSerde(PaymentList.class, serdeProps);
 
     /************************************************************************
-     * INITIALIZATION
+     * NESTED
      ************************************************************************/
 
-    static {
-        Map<String, Object> serdeProps = new HashMap<String, Object>();
-
-        customerMessageSerde = createSerde(CustomerMessage.class, serdeProps);
-        customerListSerde = createSerde(CustomerList.class, serdeProps);
-        policyMessageSerde = createSerde(PolicyMessage.class, serdeProps);
-        policyListSerde = createSerde(PolicyList.class, serdeProps);
-        claimMessageSerde = createSerde(ClaimMessage.class, serdeProps);
-        claimListSerde = createSerde(ClaimList.class, serdeProps);
-        paymentMessageSerde = createSerde(PaymentMessage.class, serdeProps);
-        paymentListSerde = createSerde(PaymentList.class, serdeProps);
-
-        /************************************************************************
-         * NESTED
-         ************************************************************************/
-
-        claimAndPaymentSerde = createSerde(ClaimAndPayment.class, serdeProps);
-        claimAndPayment2Serde = createSerde(ClaimAndPayment2.class, serdeProps);
-        customerViewSerde = createSerde(CustomerView.class, serdeProps);
-    }
+    public static Serde<ClaimAndPayment> claimAndPaymentSerde = createSerde(ClaimAndPayment.class, serdeProps);
+    public static Serde<ClaimAndPayment2> claimAndPayment2Serde = createSerde(ClaimAndPayment2.class, serdeProps);
+    public static Serde<CustomerView> customerViewSerde = createSerde(CustomerView.class, serdeProps);
 
     /************************************************************************
      * MESSAGES
      ************************************************************************/
 
-    static public class CustomerMessage extends GenericJson  {
+    static public class CustomerMessage extends JsonToString {
         public String ADDRESS;
         public String CUSTOMER;
         public Double CUSTOMERTIME;
         public String POLICY;
     }
 
-    static public class PolicyMessage extends GenericJson  {
+    static public class PolicyMessage extends JsonToString {
         public int PVAR1;
         public String POLICYENDTIME;
         public int POLICY;
@@ -79,7 +60,7 @@ public class Messages {
     static public class PolicyList extends ArrayList<PolicyMessage>{};
 
     @JsonIgnoreProperties({ "policy" })
-    static public class ClaimMessage extends GenericJson  {
+    static public class ClaimMessage extends JsonToString {
         public Double CLAIMTIME;
         public String CLAIMNUMBER;
         public Double CLAIMREPORTTIME;
@@ -93,7 +74,7 @@ public class Messages {
     static public class ClaimList extends ArrayList<ClaimMessage>{};
 
     @JsonIgnoreProperties({ "policy" })
-    static public class PaymentMessage extends GenericJson  {
+    static public class PaymentMessage extends JsonToString {
         public Double PAYMENT;
         public Double PAYTIME;
         public Integer CLAIMCOUNTER;
@@ -106,7 +87,7 @@ public class Messages {
 
     static public class PaymentList extends ArrayList<PaymentMessage>{};
 
-    static public class CustomerAndPolicy extends GenericJson  {
+    static public class CustomerAndPolicy extends JsonToString {
         public ArrayList<CustomerMessage> customerList = new ArrayList<>();
         public ArrayList<PolicyMessage> policyList = new ArrayList<>();
 
@@ -117,10 +98,9 @@ public class Messages {
             this.customerList = customerList;
             this.policyList = policyList;
         }
-
     }
 
-    static public class ClaimAndPayment extends GenericJson  {
+    static public class ClaimAndPayment extends JsonToString {
         public ArrayList<ClaimMessage> claimList = new ArrayList<>();
         public ArrayList<PaymentMessage> paymentList = new ArrayList<>();
 
@@ -133,14 +113,14 @@ public class Messages {
         }
     }
 
-    static public class ClaimAndPayment2 extends GenericJson  {
+    static public class ClaimAndPayment2 extends JsonToString {
         public Map<String, ClaimAndPayment> claimAndPaymentMap = new HashMap<>();
 
         public ClaimAndPayment2() {
         }
     }
 
-    static public class CustomerPolicyClaimPayment extends GenericJson  {
+    static public class CustomerPolicyClaimPayment extends JsonToString {
         public CustomerAndPolicy customerAndPolicy = new CustomerAndPolicy();
         public ClaimAndPayment claimAndPayment = new ClaimAndPayment();
 
@@ -154,7 +134,7 @@ public class Messages {
      * GENERIC METHODS
      ************************************************************************/
 
-    static public class CustomerView extends GenericJson {
+    static public class CustomerView extends JsonToString {
         public int customerKey;
         public ArrayList<CustomerMessage> customerRecords = new ArrayList<>();
         public ArrayList<PolicyMessage> policyRecords = new ArrayList<>();
@@ -169,7 +149,7 @@ public class Messages {
     }
 
     private static ObjectMapper mapper = new ObjectMapper();
-    static public class GenericJson {
+    static public class JsonToString {
         public String toString() {
             try {
                 return mapper.writeValueAsString(this);
@@ -178,7 +158,6 @@ public class Messages {
                 return null;
             }
         }
-
     }
 
     static public <T> Serde createSerde(T clazz, Map<String, Object> serdeProps) {
@@ -191,6 +170,5 @@ public class Messages {
         serdeProps.put("JsonPOJOClass", clazz);
         deserializer.configure(serdeProps, false);
         return Serdes.serdeFrom(serializer, deserializer);
-
     }
 }
