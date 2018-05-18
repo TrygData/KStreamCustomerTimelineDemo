@@ -7,7 +7,7 @@ import java.util.List;
 
 @Data
 @AllArgsConstructor
-public class GenericDoubleListView<V1, V2> {
+public class GenericListsView<V1, V2> {
     List<V1> list1;
     List<V2> list2;
 }

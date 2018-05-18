@@ -1,104 +1,64 @@
 package com.tryg.kafkapoc.processor;
 
-import com.tryg.kafkapoc.config.KafkaPropertiesFactory;
 import com.tryg.kafkapoc.config.PocConstants;
+import com.tryg.kafkapoc.config.StreamsBuilderUtil;
 import com.tryg.kafkapoc.model.*;
 import com.tryg.kafkapoc.serde.SerdeFactory;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.Consumed;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Printed;
+import org.apache.kafka.streams.kstream.Produced;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 
 @Component
 public class PocProcessor {
 
-    private final KafkaPropertiesFactory propsFactory;
     private final SerdeFactory serdeFactory;
+    private final StreamsBuilderUtil streamsBuilderUtil;
 
     @Autowired
-    public PocProcessor(KafkaPropertiesFactory propsFactory, SerdeFactory serdeFactory) {
-        this.propsFactory = propsFactory;
+    public PocProcessor(SerdeFactory serdeFactory, StreamsBuilderUtil streamsBuilderUtil) {
         this.serdeFactory = serdeFactory;
+        this.streamsBuilderUtil = streamsBuilderUtil;
     }
 
     @PostConstruct
     public void process() {
-        StreamsBuilder streamsBuilder = new StreamsBuilder();
+        KStream<String, CustomerMessage> customers = streamsBuilderUtil.readTopic(PocConstants.CUSTOMER_TOPIC, String.class, CustomerMessage.class);
+        KStream<Integer, PolicyMessage> policies = streamsBuilderUtil.readTopic(PocConstants.POLICY_TOPIC, Integer.class, PolicyMessage.class);
+        KStream<String, ClaimMessage> claims = streamsBuilderUtil.readTopic(PocConstants.CLAIM_TOPIC, String.class, ClaimMessage.class);
+        KStream<String, PaymentMessage> payments = streamsBuilderUtil.readTopic(PocConstants.PAYMENT_TOPIC, String.class, PaymentMessage.class);
 
-        KStream<String, CustomerMessage> customers = streamsBuilder.stream(PocConstants.CUSTOMER_TOPIC,
-                Consumed.with(Serdes.String(), serdeFactory.getSerde(CustomerMessage.class)));
+        payments.print(Printed.toSysOut());
 
-        KStream<Integer, PolicyMessage> policies = streamsBuilder.stream(PocConstants.POLICY_TOPIC,
-                Consumed.with(Serdes.Integer(), serdeFactory.getSerde(PolicyMessage.class)));
+        // Group all tables by policy number
+        KTable<String, List<CustomerMessage>> groupedCustomers = streamsBuilderUtil.groupAndAggregateInList(customers, String.class, CustomerMessage.class, CustomerMessage::getPolicy);
+        KTable<String, List<PolicyMessage>> groupedPolicies = streamsBuilderUtil.groupAndAggregateInList(policies, String.class, PolicyMessage.class, policyMessage -> String.valueOf(policyMessage.getPolicy()));
+        KTable<String, List<ClaimMessage>> groupedClaims = streamsBuilderUtil.groupAndAggregateInList(claims, String.class, ClaimMessage.class, claimMessage -> getPolicyNumber(claimMessage.getClaimNumber()));
+        KTable<String, List<PaymentMessage>> groupedPayments = streamsBuilderUtil.groupAndAggregateInList(payments, String.class, PaymentMessage.class, paymentMessage -> getPolicyNumber(paymentMessage.getClaimNumber()));
 
-        KStream<String, ClaimMessage> claims = streamsBuilder.stream(PocConstants.CLAIM_TOPIC,
-                Consumed.with(Serdes.String(), serdeFactory.getSerde(ClaimMessage.class)));
+        //Join customers with policies and claims with payments
+        KTable<String, GenericListsView<CustomerMessage, PolicyMessage>> customerPolicies = groupedCustomers.join(groupedPolicies, GenericListsView::new);
+        KTable<String, GenericListsView<ClaimMessage, PaymentMessage>> claimPayments = groupedClaims.join(groupedPayments, GenericListsView::new);
 
-        KStream<String, PaymentMessage> payments = streamsBuilder.stream(PocConstants.PAYMENT_TOPIC,
-                Consumed.with(Serdes.String(), serdeFactory.getSerde(PaymentMessage.class)));
+        /*
+         * 1. Join customer-policy and claim-payment streams on policy number into CustomerView
+         * 2. Map to stream and change key to customer
+         * 3. Print processing message
+         * 4. Send result to outbound topic
+         * 5. Print processed message
+         */
+        customerPolicies
+                .join(claimPayments, (value1, value2) -> new CustomerView(value1.getList1().get(0).getCustomer(), value1.getList1(), value1.getList2(), value2.getList1(), value2.getList2()))
+                .toStream((key, value) -> value.getCustomerKey())
+                .peek((key, value) -> System.out.println("Processing message (" + key + ", " + value + ")"))
+                .through(PocConstants.CUSTOMER_VIEW_TOPIC, Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getSerde(CustomerView.class)));
 
-        KTable<String, GenericDoubleListView<CustomerMessage, PolicyMessage>> customerPolicies = joinTwoStreams(
-                customers,
-                policies,
-                String.class,
-                CustomerMessage.class,
-                PolicyMessage.class,
-                CustomerMessage::getPolicy,
-                policyMessage -> String.valueOf(policyMessage.getPolicy())
-        );
-
-        KTable<String, GenericDoubleListView<ClaimMessage, PaymentMessage>> claimPayments = joinTwoStreams(
-                claims,
-                payments,
-                String.class,
-                ClaimMessage.class,
-                PaymentMessage.class,
-                claimMessage -> getPolicyNumber(claimMessage.getClaimNumber()),
-                paymentMessage -> getPolicyNumber(paymentMessage.getClaimNumber())
-        );
-
-        KTable<String, CustomerView> customerViews = customerPolicies.join(claimPayments, (value1, value2) ->
-                new CustomerView(value1.getList1().get(0).getCustomer(), value1.getList1(), value1.getList2(), value2.getList1(), value2.getList2()));
-
-        KStream<String, CustomerView> customerOutStream = customerViews.toStream((key, value) -> value.getCustomerKey());
-
-        customerOutStream.foreach((key, value) -> System.out.println("Processed message (" + key + ", " + value + ")"));
-
-        customerOutStream.to(PocConstants.CUSTOMER_VIEW_TOPIC, Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getSerde(CustomerView.class)));
-
-        KafkaStreams kafkaStreams = new KafkaStreams(streamsBuilder.build(), propsFactory.getFullProperties());
-        kafkaStreams.start();
-    }
-
-    private <K, V1, V2> KTable<K, GenericDoubleListView<V1, V2>> joinTwoStreams(KStream<?, V1> stream1, KStream<?, V2> stream2,
-                                                                                Class<K> keyClass, Class<V1> valueClass1, Class<V2> valueClass2,
-                                                                                Function<V1, K> keyFunc1, Function<V2, K> keyFunc2) {
-        KTable<K, List<V1>> table1 = groupAndAggregateInList(stream1, keyClass, valueClass1, keyFunc1);
-        KTable<K, List<V2>> table2 = groupAndAggregateInList(stream2, keyClass, valueClass2, keyFunc2);
-
-        return table1.join(table2, GenericDoubleListView::new);
-    }
-
-    private <V, K> KTable<K, List<V>> groupAndAggregateInList(KStream<?, V> stream, Class<K> keyClass, Class<V> valueClass, Function<V, K> keyFunc) {
-        return stream
-                .groupBy(
-                        (key, value) -> keyFunc.apply(value),
-                        Serialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getSerde(valueClass)))
-                .aggregate(
-                        ArrayList::new,
-                        (key, value, aggregate) -> {
-                            aggregate.add(value);
-                            return aggregate;
-                        },
-                        Materialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getListSerde(valueClass)));
+        streamsBuilderUtil.start();
     }
 
     private String getPolicyNumber(String claimNumber) {
