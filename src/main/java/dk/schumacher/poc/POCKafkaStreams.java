@@ -1,5 +1,6 @@
 package dk.schumacher.poc;
 
+import dk.schumacher.model.JsonPOJOSerializer;
 import dk.schumacher.model.Messages;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
@@ -44,6 +45,7 @@ public class POCKafkaStreams {
         /****************************************************************************************************
          * KSTREAMS DEFINITIONS
          ****************************************************************************************************/
+
         KStream<String, Messages.CustomerMessage> customerStream = kStreamBuilder.stream(stringSerde, customerMessageSerde,
                 CUSTOMER_TOPIC);
         KStream<Integer, Messages.PolicyMessage> policyStream = kStreamBuilder.stream(integerSerde, policyMessageSerde,
@@ -125,6 +127,7 @@ public class POCKafkaStreams {
         /****************************************************************************************************
          * KEY TRANSFORMATON
          ****************************************************************************************************/
+
         KTable<Integer, CustomerView> customerView = allJoinedAndCoGrouped.<CustomerView>mapValues((all) -> {
             CustomerView view = new CustomerView(Integer.parseInt(
                     all.customerAndPolicy.customerList.get(0).CUSTOMER.replaceFirst("cust", "")));
@@ -142,12 +145,14 @@ public class POCKafkaStreams {
             return view;
         });
 
+        //customerView.print();
+        customerView.foreach((k, v) -> System.out.println(v.toString()));
+
         /****************************************************************************************************
          * FINAL DATA TO OUTPUT
          ****************************************************************************************************/
-//		customerView.print();
-        customerView.through(integerSerde, customerViewSerde, CUSTOMER_VIEW_OUT);
 
+        customerView.through(integerSerde, customerViewSerde, CUSTOMER_VIEW_OUT);
         System.out.println("Starting Kafka Streams Customer Demo");
 
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
