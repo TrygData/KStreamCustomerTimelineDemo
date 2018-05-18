@@ -138,7 +138,7 @@ public class Messages {
         }
     }
 
-     static <T> Serde createSerde(T clazz, Map<String, Object> serdeProps) {
+    static public <T> Serde createSerde(T clazz, Map<String, Object> serdeProps) {
         Serializer<T> serializer = new JsonPOJOSerializer<T>();
 
         serdeProps.put("JsonPOJOClass", clazz);
