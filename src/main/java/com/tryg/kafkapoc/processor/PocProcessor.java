@@ -1,5 +1,6 @@
 package com.tryg.kafkapoc.processor;
 
+import com.tryg.kafkapoc.config.KafkaPropertiesFactory;
 import com.tryg.kafkapoc.config.PocConstants;
 import com.tryg.kafkapoc.config.StreamsBuilderUtil;
 import com.tryg.kafkapoc.model.*;
@@ -16,17 +17,19 @@ import java.util.Collection;
 @Component
 public class PocProcessor {
 
+    private final KafkaPropertiesFactory kafkaPropertiesFactory;
     private final SerdeFactory serdeFactory;
-    private final StreamsBuilderUtil streamsBuilderUtil;
 
     @Autowired
-    public PocProcessor(SerdeFactory serdeFactory, StreamsBuilderUtil streamsBuilderUtil) {
+    public PocProcessor(KafkaPropertiesFactory kafkaPropertiesFactory, SerdeFactory serdeFactory) {
+        this.kafkaPropertiesFactory = kafkaPropertiesFactory;
         this.serdeFactory = serdeFactory;
-        this.streamsBuilderUtil = streamsBuilderUtil;
     }
 
     @PostConstruct
     public void process() {
+        StreamsBuilderUtil streamsBuilderUtil = new StreamsBuilderUtil(kafkaPropertiesFactory, serdeFactory);
+
         KStream<String, CustomerMessage> customers = streamsBuilderUtil.readTopic(PocConstants.CUSTOMER_TOPIC, String.class, CustomerMessage.class);
         KStream<Integer, PolicyMessage> policies = streamsBuilderUtil.readTopic(PocConstants.POLICY_TOPIC, Integer.class, PolicyMessage.class);
         KStream<String, ClaimMessage> claims = streamsBuilderUtil.readTopic(PocConstants.CLAIM_TOPIC, String.class, ClaimMessage.class);
@@ -44,8 +47,8 @@ public class PocProcessor {
         groupedPayments.toStream().to("grouped-payments", Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getCollectionSerde(PaymentMessage.class)));
 
         //Join customers with policies and claims with payments
-        KTable<String, GenericCollections<CustomerMessage, PolicyMessage>> customerPolicies = groupedCustomers.join(groupedPolicies, GenericCollections::new);
-        KTable<String, GenericCollections<ClaimMessage, PaymentMessage>> claimPayments = groupedClaims.join(groupedPayments, GenericCollections::new);
+        KTable<String, GenericCollections<CustomerMessage, PolicyMessage>> customerPolicies = groupedCustomers.leftJoin(groupedPolicies, GenericCollections::new);
+        KTable<String, GenericCollections<ClaimMessage, PaymentMessage>> claimPayments = groupedClaims.leftJoin(groupedPayments, GenericCollections::new);
 
         customerPolicies.toStream().to("customers-policies",
                 Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getGenericListsViewSerde(CustomerMessage.class, PolicyMessage.class)));
@@ -60,7 +63,12 @@ public class PocProcessor {
          * 5. Print processed message
          */
         customerPolicies
-                .join(claimPayments, (value1, value2) -> new CustomerView(value1.getCollection1().stream().findFirst().map(CustomerMessage::getCustomer).orElse(null), value1.getCollection1(), value1.getCollection2(), value2.getCollection1(), value2.getCollection2()))
+                .leftJoin(claimPayments, (value1, value2) -> new CustomerView(
+                        value1.getCollection1().stream().findFirst().map(CustomerMessage::getCustomer).orElse(null),
+                        value1.getCollection1(),
+                        value1.getCollection2(),
+                        value2 == null ? null : value2.getCollection1(),
+                        value2 == null ? null : value2.getCollection2()))
                 .toStream((key, value) -> value.getCustomerKey())
                 .through(PocConstants.CUSTOMER_VIEW_TOPIC, Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getSerde(CustomerView.class)));
 

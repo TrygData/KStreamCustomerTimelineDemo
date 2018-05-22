@@ -20,10 +20,10 @@ public class StreamsBuilderUtil {
     private final SerdeFactory serdeFactory;
     private final StreamsBuilder streamsBuilder;
 
-    public StreamsBuilderUtil(KafkaPropertiesFactory propsFactory, SerdeFactory serdeFactory, StreamsBuilder streamsBuilder) {
+    public StreamsBuilderUtil(KafkaPropertiesFactory propsFactory, SerdeFactory serdeFactory) {
         this.propsFactory = propsFactory;
         this.serdeFactory = serdeFactory;
-        this.streamsBuilder = streamsBuilder;
+        this.streamsBuilder = new StreamsBuilder();
     }
 
     public <K, V> KStream<K, V> readTopic(String topicName, Class<K> keyClass, Class<V> valueClass) {
