@@ -42,6 +42,8 @@ public class KafkaCustomerFileTopicDispatch {
 
         BufferedReader br = new BufferedReader(new FileReader(file));
 
+        int count = 0;
+
         for (String line; (line = br.readLine()) != null; ) {
             System.out.println(line);
 
@@ -49,9 +51,17 @@ public class KafkaCustomerFileTopicDispatch {
 
             ProducerRecord<K, V> record = new ProducerRecord<>(topicName, keyFunction.apply(payload), payload);
 
-            System.out.println("Sending message: " + record);
+            producer.send(record, (metadata, exception) -> System.out.println("Offset of " + metadata.topic() + " is " + metadata.offset()));
 
-            producer.send(record);
+            count++;
+        }
+
+        System.out.println("Sent " + count + " messages to " + topicName);
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
         producer.close();

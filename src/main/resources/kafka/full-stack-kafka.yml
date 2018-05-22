@@ -82,6 +82,8 @@ services:
     environment:
       KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
       PROXY: "true"
+      MAX_BYTES: 2000000
+      RECORD_POLL_TIMEOUT: 10000
     depends_on:
       - zoo1
       - kafka1

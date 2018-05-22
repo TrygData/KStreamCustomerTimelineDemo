@@ -6,13 +6,12 @@ import com.tryg.kafkapoc.model.*;
 import com.tryg.kafkapoc.serde.SerdeFactory;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
+import java.util.Collection;
 
 @Component
 public class PocProcessor {
@@ -33,17 +32,25 @@ public class PocProcessor {
         KStream<String, ClaimMessage> claims = streamsBuilderUtil.readTopic(PocConstants.CLAIM_TOPIC, String.class, ClaimMessage.class);
         KStream<String, PaymentMessage> payments = streamsBuilderUtil.readTopic(PocConstants.PAYMENT_TOPIC, String.class, PaymentMessage.class);
 
-        payments.print(Printed.toSysOut());
-
         // Group all tables by policy number
-        KTable<String, List<CustomerMessage>> groupedCustomers = streamsBuilderUtil.groupAndAggregateInList(customers, String.class, CustomerMessage.class, CustomerMessage::getPolicy);
-        KTable<String, List<PolicyMessage>> groupedPolicies = streamsBuilderUtil.groupAndAggregateInList(policies, String.class, PolicyMessage.class, policyMessage -> String.valueOf(policyMessage.getPolicy()));
-        KTable<String, List<ClaimMessage>> groupedClaims = streamsBuilderUtil.groupAndAggregateInList(claims, String.class, ClaimMessage.class, claimMessage -> getPolicyNumber(claimMessage.getClaimNumber()));
-        KTable<String, List<PaymentMessage>> groupedPayments = streamsBuilderUtil.groupAndAggregateInList(payments, String.class, PaymentMessage.class, paymentMessage -> getPolicyNumber(paymentMessage.getClaimNumber()));
+        KTable<String, Collection<CustomerMessage>> groupedCustomers = streamsBuilderUtil.groupAndAggregateItems(customers, String.class, CustomerMessage.class, CustomerMessage::getPolicy);
+        KTable<String, Collection<PolicyMessage>> groupedPolicies = streamsBuilderUtil.groupAndAggregateItems(policies, String.class, PolicyMessage.class, policyMessage -> String.valueOf(policyMessage.getPolicy()));
+        KTable<String, Collection<ClaimMessage>> groupedClaims = streamsBuilderUtil.groupAndAggregateItems(claims, String.class, ClaimMessage.class, claimMessage -> getPolicyNumber(claimMessage.getClaimNumber()));
+        KTable<String, Collection<PaymentMessage>> groupedPayments = streamsBuilderUtil.groupAndAggregateItems(payments, String.class, PaymentMessage.class, paymentMessage -> getPolicyNumber(paymentMessage.getClaimNumber()));
+
+        groupedCustomers.toStream().to("grouped-customers", Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getCollectionSerde(CustomerMessage.class)));
+        groupedPolicies.toStream().to("grouped-policies", Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getCollectionSerde(PolicyMessage.class)));
+        groupedClaims.toStream().to("grouped-claims", Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getCollectionSerde(ClaimMessage.class)));
+        groupedPayments.toStream().to("grouped-payments", Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getCollectionSerde(PaymentMessage.class)));
 
         //Join customers with policies and claims with payments
-        KTable<String, GenericListsView<CustomerMessage, PolicyMessage>> customerPolicies = groupedCustomers.join(groupedPolicies, GenericListsView::new);
-        KTable<String, GenericListsView<ClaimMessage, PaymentMessage>> claimPayments = groupedClaims.join(groupedPayments, GenericListsView::new);
+        KTable<String, GenericCollections<CustomerMessage, PolicyMessage>> customerPolicies = groupedCustomers.join(groupedPolicies, GenericCollections::new);
+        KTable<String, GenericCollections<ClaimMessage, PaymentMessage>> claimPayments = groupedClaims.join(groupedPayments, GenericCollections::new);
+
+        customerPolicies.toStream().to("customers-policies",
+                Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getGenericListsViewSerde(CustomerMessage.class, PolicyMessage.class)));
+        claimPayments.toStream().to("claims-payments",
+                Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getGenericListsViewSerde(ClaimMessage.class, PaymentMessage.class)));
 
         /*
          * 1. Join customer-policy and claim-payment streams on policy number into CustomerView
@@ -53,9 +60,8 @@ public class PocProcessor {
          * 5. Print processed message
          */
         customerPolicies
-                .join(claimPayments, (value1, value2) -> new CustomerView(value1.getList1().get(0).getCustomer(), value1.getList1(), value1.getList2(), value2.getList1(), value2.getList2()))
+                .join(claimPayments, (value1, value2) -> new CustomerView(value1.getCollection1().stream().findFirst().map(CustomerMessage::getCustomer).orElse(null), value1.getCollection1(), value1.getCollection2(), value2.getCollection1(), value2.getCollection2()))
                 .toStream((key, value) -> value.getCustomerKey())
-                .peek((key, value) -> System.out.println("Processing message (" + key + ", " + value + ")"))
                 .through(PocConstants.CUSTOMER_VIEW_TOPIC, Produced.with(serdeFactory.getSerde(String.class), serdeFactory.getSerde(CustomerView.class)));
 
         streamsBuilderUtil.start();

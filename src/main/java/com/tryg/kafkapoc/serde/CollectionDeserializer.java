@@ -6,16 +6,16 @@ import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 
-public class ListDeserializer<T> implements Deserializer<List<T>> {
+public class CollectionDeserializer<T> implements Deserializer<Collection<T>> {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private Class<T> itemClass;
 
-    public ListDeserializer(Class<T> itemClass) {
+    public CollectionDeserializer(Class<T> itemClass) {
         this.itemClass = itemClass;
     }
 
@@ -25,12 +25,12 @@ public class ListDeserializer<T> implements Deserializer<List<T>> {
     }
 
     @Override
-    public List<T> deserialize(String topic, byte[] data) {
-        CollectionType collectionType = objectMapper.getTypeFactory().constructCollectionType(ArrayList.class, itemClass);
+    public Collection<T> deserialize(String topic, byte[] data) {
+        CollectionType collectionType = objectMapper.getTypeFactory().constructCollectionType(HashSet.class, itemClass);
         try {
             return data == null ? null : objectMapper.readValue(data, collectionType);
         } catch (IOException e) {
-            throw new SerializationException("Error deserializing list of " + itemClass.getSimpleName() + " from JSON", e);
+            throw new SerializationException("Error deserializing collection of " + itemClass.getSimpleName() + " from JSON", e);
         }
     }
 

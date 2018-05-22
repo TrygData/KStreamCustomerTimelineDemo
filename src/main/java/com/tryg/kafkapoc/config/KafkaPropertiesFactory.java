@@ -2,6 +2,7 @@ package com.tryg.kafkapoc.config;
 
 import com.tryg.kafkapoc.serde.JsonSerializer;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.*;
 import org.apache.kafka.streams.StreamsConfig;
@@ -26,6 +27,7 @@ public class KafkaPropertiesFactory {
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "POC-1");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         return props;
     }

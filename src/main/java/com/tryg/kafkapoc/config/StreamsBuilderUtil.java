@@ -10,8 +10,8 @@ import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Serialized;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.function.Function;
 
 @Component
@@ -30,19 +30,17 @@ public class StreamsBuilderUtil {
         return streamsBuilder.stream(topicName, Consumed.with(serdeFactory.getSerde(keyClass), serdeFactory.getSerde(valueClass)));
     }
 
-    public <V, K> KTable<K, List<V>> groupAndAggregateInList(KStream<?, V> stream, Class<K> keyClass, Class<V> valueClass, Function<V, K> keyFunc) {
+    public <V, K> KTable<K, Collection<V>> groupAndAggregateItems(KStream<?, V> stream, Class<K> keyClass, Class<V> valueClass, Function<V, K> keyFunc) {
         return stream
-                .groupBy(
-                        (key, value) -> keyFunc.apply(value),
-                        Serialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getSerde(valueClass))
-                )
+                .selectKey((key, value) -> keyFunc.apply(value))
+                .groupByKey(Serialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getSerde(valueClass)))
                 .aggregate(
-                        ArrayList::new,
+                        HashSet::new,
                         (key, value, aggregate) -> {
                             aggregate.add(value);
                             return aggregate;
                         },
-                        Materialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getListSerde(valueClass))
+                        Materialized.with(serdeFactory.getSerde(keyClass), serdeFactory.getCollectionSerde(valueClass))
                 );
     }
 
