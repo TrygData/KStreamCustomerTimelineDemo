@@ -1,46 +1,47 @@
 package kstream.demo.test;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.Callable;
-
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.json.JSONException;
-import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Properties;
 
 public class KafkaCustomerFileTopicDispatch {
 
-	public static void main(String[] args) throws IOException, InterruptedException, JSONException {
+	private KafkaProducer<String, String> kafkaProducer = null;
 
-		Properties producerProperties = KafkaUtilities.getKafkaProducer1Properties();
+	public KafkaCustomerFileTopicDispatch(KafkaProducer<String, String> kafkaProducer) {
+		this.kafkaProducer = kafkaProducer;
+	}
 
-		String file = "C:\\Users\\ca-devops\\Desktop\\KStreamsDemo-master\\Payment.txt";
-
-		KafkaProducer<String, String> producer = new KafkaProducer<>(producerProperties);
-		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+	public void sendFileToTopic(String filePath, String topicName) throws IOException {
+		try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
 			for (String line; (line = br.readLine()) != null;) {
 				System.out.println(line);
-				producer.send(new ProducerRecord<String, String>("KTABLE_TEST10", line));
-
+				this.kafkaProducer.send(new ProducerRecord<String, String>(topicName, line));
 			}
 		}
+	}
+
+	public static void main(String[] args) throws IOException, InterruptedException, JSONException {
+		Properties producerProperties = KafkaUtilities.getKafkaProducer1Properties();
+		KafkaProducer<String, String> producer = new KafkaProducer<>(producerProperties);
+
+		KafkaCustomerFileTopicDispatch dispatcher = new KafkaCustomerFileTopicDispatch(producer);
+
+		dispatcher.sendFileToTopic("Customer.txt", "STATPEJ.POC_CUSTOMER_DECODED");
+		dispatcher.sendFileToTopic("Policy.txt"  , "STATPEJ.POC_POLICY_DECODED");
+		dispatcher.sendFileToTopic("Claim.txt"   , "STATPEJ.POC_CLAIM_DECODED");
+		dispatcher.sendFileToTopic("Payment.txt" , "STATPEJ.POC_CLAIMPAYMENT_DECODED");
 
 		Thread.sleep(1000);
 		producer.close();
 	}
+
+
 
 }

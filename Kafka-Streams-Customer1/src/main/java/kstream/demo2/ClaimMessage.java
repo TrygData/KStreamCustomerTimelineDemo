@@ -1,4 +1,4 @@
-package kstream.demo3;
+package kstream.demo2;
 
 public class ClaimMessage {
     public Double CLAIMTIME;

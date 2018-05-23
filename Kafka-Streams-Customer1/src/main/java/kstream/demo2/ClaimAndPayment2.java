@@ -1,4 +1,4 @@
-package kstream.demo3;
+package kstream.demo2;
 
 import java.util.HashMap;
 import java.util.Map;

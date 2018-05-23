@@ -1,16 +1,16 @@
-package main.java.kstream.demo3;
+package kstream.demo3;
 
-import main.java.kstream.demo2.ClaimAndPayment;
-import main.java.kstream.demo2.CustomerView;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KStreamBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 public class CustomerPipeline3 {
 
@@ -23,10 +23,11 @@ public class CustomerPipeline3 {
     private static final String POLICY_STORE            = "PolicyStore";
     private static final String CLAIM_STORE             = "ClaimStrStore";
     private static final String PAYMENT_STORE           = "PaymentStore";
-    private static final String CLAIM_AND_PAYMENT_STORE = "claimAndPayment2Store";
+    private static final String CLAIM_AND_PAYMENT_STORE = "ClaimAndPayment2Store";
 
     public static void main(String[] args) {
-        StreamsConfig config = new StreamsConfig(KafkaPropertiesUtil.getProperties());
+        final Serde<String> stringSerde = Serdes.String();
+        final Serde<Integer> integerSerde = Serdes.Integer();
 
         final Serde<CustomerMessage>  customerMessageSerde  = createSerde(CustomerMessage.class);
         final Serde<CustomerList>     customerListSerde     = createSerde(CustomerList.class);
@@ -40,7 +41,27 @@ public class CustomerPipeline3 {
         final Serde<ClaimAndPayment2> claimAndPayment2Serde = createSerde(ClaimAndPayment2.class);
         final Serde<CustomerView>     customerViewSerde     = createSerde(CustomerView.class);
 
-        
+        // input KStream definitions
+        StreamsConfig config = new StreamsConfig(KafkaPropertiesUtil.getProperties());
+        KStreamBuilder kStreamBuilder = new KStreamBuilder();
+
+        KStream<String, CustomerMessage> customerStream = kStreamBuilder.stream(stringSerde , customerMessageSerde, CUSTOMER_TOPIC);
+        KStream<Integer, PolicyMessage>  policyStream   = kStreamBuilder.stream(integerSerde, policyMessageSerde  , POLICY_TOPIC);
+        KStream<Integer, ClaimMessage>   claimStream    = kStreamBuilder.stream(integerSerde, claimMessageSerde   , CLAIM_TOPIC);
+        KStream<Integer, PaymentMessage> paymentStream  = kStreamBuilder.stream(integerSerde, paymentMessageSerde , PAYMENT_TOPIC);
+
+        // join Customer and Policy
+
+        // join Claim and Payment
+
+        // join Customer, Policy, Claim and Payment
+
+
+        // start stream
+        KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
+        kafkaStreams.start();
+
+
 
 
     }

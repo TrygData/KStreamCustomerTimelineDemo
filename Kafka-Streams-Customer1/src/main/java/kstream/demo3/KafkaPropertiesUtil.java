@@ -1,4 +1,4 @@
-package main.java.kstream.demo3;
+package kstream.demo3;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
