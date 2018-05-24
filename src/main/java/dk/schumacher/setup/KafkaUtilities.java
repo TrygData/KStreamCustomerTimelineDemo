@@ -2,16 +2,19 @@ package dk.schumacher.setup;
 
 import java.util.Properties;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+
+import static org.apache.kafka.clients.producer.ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG;
+import static org.apache.kafka.clients.producer.ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG;
 
 public class KafkaUtilities {
 
 	public static Properties getKafkaProducer1Properties() {
 		Properties properties = new Properties();
-		properties.put("bootstrap.servers",
-				"127.0.0.1:9092");
-		properties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-		properties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+		properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
+		properties.put(KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
+		properties.put(VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
 		return properties;
 	}
 //

@@ -154,6 +154,9 @@ public class POCKafkaStreams {
         customerView.through(integerSerde, customerViewSerde, CUSTOMER_VIEW_OUT);
         System.out.println("Starting Kafka Streams Customer Demo");
 
+        /****************************************************************************************************
+         * KSTREAMS START STREAMS
+         ****************************************************************************************************/
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.cleanUp();
          kafkaStreams.start();
