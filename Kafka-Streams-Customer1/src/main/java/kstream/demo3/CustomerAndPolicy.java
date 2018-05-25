@@ -12,6 +12,8 @@ public class CustomerAndPolicy {
         this.policyList = policyList;
     }
 
-
+    public String toString() {
+        return "{" + customerList.toString() + "," + policyList.toString() + "}";
+    }
 
 }

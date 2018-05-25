@@ -9,4 +9,7 @@ public class CustomerList {
     public CustomerList() {
     }
 
+    public String toString() {
+        return customerRecords.toString();
+    }
 }

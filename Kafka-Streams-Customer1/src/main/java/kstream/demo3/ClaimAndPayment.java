@@ -12,4 +12,8 @@ public class ClaimAndPayment {
         this.paymentList = paymentList;
     }
 
+    public String toString() {
+        return "{" + claimList + "," + paymentList + "}";
+    }
+
 }

@@ -7,4 +7,8 @@ public class PaymentList {
 
     public PaymentList() {
     }
+
+    public String toString() {
+        return this.paymentRecords.toString();
+    }
 }

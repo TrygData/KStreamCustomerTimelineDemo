@@ -7,4 +7,8 @@ public class PolicyList {
 
     public PolicyList() {
     }
+
+    public String toString() {
+        return policyRecords.toString();
+    }
 }

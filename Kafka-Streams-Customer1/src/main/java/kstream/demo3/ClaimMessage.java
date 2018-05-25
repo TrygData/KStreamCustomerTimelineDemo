@@ -6,4 +6,9 @@ public class ClaimMessage {
     public Double CLAIMREPORTTIME;
     public String CLAIMCOUNTER;
 
+
+    public String toString() {
+        return CLAIMNUMBER + "/" + CLAIMCOUNTER;
+    }
+
 }

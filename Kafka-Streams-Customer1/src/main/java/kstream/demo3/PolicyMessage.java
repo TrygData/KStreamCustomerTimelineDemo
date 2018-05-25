@@ -8,4 +8,8 @@ public class PolicyMessage {
     public String POLICYSTARTTIME;
     public int PVAR0;
 
+    public String toString() {
+        return "" + POLICY + "/" + PVAR0;
+    }
+
 }

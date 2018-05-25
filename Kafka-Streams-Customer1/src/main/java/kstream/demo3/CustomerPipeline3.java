@@ -6,8 +6,10 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.KGroupedStream;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KStreamBuilder;
+import org.apache.kafka.streams.kstream.KTable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,20 +52,123 @@ public class CustomerPipeline3 {
         KStream<Integer, ClaimMessage>   claimStream    = kStreamBuilder.stream(integerSerde, claimMessageSerde   , CLAIM_TOPIC);
         KStream<Integer, PaymentMessage> paymentStream  = kStreamBuilder.stream(integerSerde, paymentMessageSerde , PAYMENT_TOPIC);
 
+        KGroupedStream<Integer, CustomerMessage> customerMessageKGrouped = customerStream.groupBy((key, customerMessage) -> customerMessage.getPolicyAsInt(), integerSerde, customerMessageSerde);
+        KTable<Integer, CustomerList> customerLists = customerMessageKGrouped.aggregate(CustomerList::new, (key, customerMessage, customerList) -> {
+            customerList.customerRecords.add(customerMessage);
+            return customerList;
+        }, customerListSerde, CUSTOMER_STORE);
+
+        /*
+        peek(customerLists);
+        */
+
+        KGroupedStream<Integer, PolicyMessage> policyMessageKGrouped = policyStream.groupBy((key, policyMessage) -> policyMessage.POLICY, integerSerde, policyMessageSerde);
+        KTable<Integer, PolicyList> policyLists = policyMessageKGrouped.aggregate(PolicyList::new, (key, policyMessage, policyList) -> {
+            policyList.policyRecords.add(policyMessage);
+            return policyList;
+        }, policyListSerde, POLICY_STORE);
+
+        /*
+        peek(policyLists);
+        */
+
+
+        KGroupedStream<String, ClaimMessage> claimMessageKGroupedStream = claimStream.groupBy((k, claim) -> claim.CLAIMNUMBER, stringSerde, claimMessageSerde);
+        KTable<String, ClaimList> claimLists = claimMessageKGroupedStream.aggregate(ClaimList::new, (key, claimMessage, claimList) -> {
+            claimList.claimRecords.add(claimMessage);
+            return claimList;
+        }, claimListSerde, CLAIM_STORE);
+
+        //peek(claimList);
+
+        KGroupedStream<String, PaymentMessage> paymentMessageKGroupedStream = paymentStream.groupBy((k, paymentMessage) -> paymentMessage.CLAIMNUMBER, stringSerde, paymentMessageSerde);
+        KTable<String, PaymentList> paymentLists = paymentMessageKGroupedStream.aggregate(PaymentList::new, (key, paymentMessage, paymentList) -> {
+            paymentList.paymentRecords.add(paymentMessage);
+            return paymentList;
+        }, paymentListSerde, PAYMENT_STORE);
+
+        //peek(paymentLists);
+
+
         // join Customer and Policy
+        KTable<Integer, CustomerAndPolicy> customerAndPolicyGroupedKTable =
+                customerLists.join(policyLists, (customer, policy) -> new CustomerAndPolicy(customer, policy));
+
+        //peek(customerAndPolicyGroupedKTable);
 
         // join Claim and Payment
+        KTable<String, ClaimAndPayment> claimAndPaymentKTable = claimLists.leftJoin(paymentLists,
+                (claim, payment) -> new ClaimAndPayment(claim, payment));
+
+        //peek(claimAndPaymentKTable);
+
+        KStream<String, ClaimAndPayment> claimAndPaymentKStream = claimAndPaymentKTable.toStream();
+
+        KGroupedStream<Integer, ClaimAndPayment> claimAndPaymentKGroupedStream = claimAndPaymentKStream.groupBy((key, claimPay) -> {
+            if (claimPay != null) {
+                String claimNumber = claimPay.claimList.claimRecords.get(0).CLAIMNUMBER.split("_")[0];
+                return Integer.parseInt(claimNumber);
+            } else {
+                return 999; // why 999 ?
+            }
+        }, integerSerde, claimAndPaymentSerde);
+
+        KTable<Integer, ClaimAndPayment2> claimAndPaymentAggregateKTable = claimAndPaymentKGroupedStream.aggregate(ClaimAndPayment2::new, (claimKey, claimPay, claimAndPay2) -> {
+            claimAndPay2.add(claimPay);
+            return claimAndPay2;
+        }, claimAndPayment2Serde, CLAIM_AND_PAYMENT_STORE);
+
 
         // join Customer, Policy, Claim and Payment
+        KTable<Integer, CustomerPolicyClaimPayment> allJoinedAndCoGrouped = customerAndPolicyGroupedKTable.leftJoin(
+                claimAndPaymentAggregateKTable, (left, right) -> new CustomerPolicyClaimPayment(left, right));
 
+
+
+        KTable<Integer, CustomerView> customerView = allJoinedAndCoGrouped.<CustomerView>mapValues((all) -> {
+            CustomerView view = new CustomerView();
+            view.cutomerKey = Integer.parseInt(
+                    all.customerAndPolicy.customerList.customerRecords.get(0).CUSTOMER.replaceFirst("cust", ""));
+            for (CustomerMessage customer : all.customerAndPolicy.customerList.customerRecords) {
+                view.customerRecords.add(customer);
+            }
+            for (PolicyMessage policy : all.customerAndPolicy.policyList.policyRecords) {
+                view.policyRecords.add(policy);
+            }
+            if (all.claimAndPayment2 != null) {
+                for (ClaimAndPayment claimAndPayment : all.claimAndPayment2.claimAndPaymentMap.values()) {
+
+                    for (ClaimMessage claim : claimAndPayment.claimList.claimRecords) {
+                        view.claimRecords.add(claim);
+                    }
+                    if (claimAndPayment.paymentList != null) {
+                        for (PaymentMessage payment : claimAndPayment.paymentList.paymentRecords) {
+                            view.paymentRecords.add(payment);
+                        }
+                    }
+                }
+            }
+            return view;
+        });
+
+        /****************************************************************************************************
+         * FINAL DATA TO OUTPUT
+         ****************************************************************************************************/
+//		customerView.print();
+        customerView.through(integerSerde, customerViewSerde, CUSTOMER_VIEW_OUT);
 
         // start stream
+        System.out.println("Starting Kafka Streams Customer Demo");
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.start();
 
+        System.out.println("Now started Customer Demo");
+    }
 
-
-
+    private static <V,T> void peek(KTable<V, T> kTable) {
+        kTable.toStream().peek((key, value) -> {
+            System.out.println(key + " : " + value);
+        });
     }
 
     private static <T> Serde<T> createSerde(Class<T> targetClass){

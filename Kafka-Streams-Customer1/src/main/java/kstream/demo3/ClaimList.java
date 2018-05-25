@@ -7,4 +7,8 @@ public class ClaimList {
 
     public ClaimList() {
     }
+
+    public String toString() {
+        return this.claimRecords.toString();
+    }
 }

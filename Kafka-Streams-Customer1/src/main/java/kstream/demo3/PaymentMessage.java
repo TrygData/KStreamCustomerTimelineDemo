@@ -6,4 +6,8 @@ public class PaymentMessage {
     public Integer CLAIMCOUNTER;
     public String CLAIMNUMBER;
 
+
+    public String toString() {
+        return CLAIMNUMBER + "/" + PAYMENT;
+    }
 }
