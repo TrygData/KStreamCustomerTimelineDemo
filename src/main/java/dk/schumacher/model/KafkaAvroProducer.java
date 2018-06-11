@@ -1,27 +1,18 @@
 package dk.schumacher.model;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Properties;
-
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.BinaryEncoder;
-import org.apache.avro.io.EncoderFactory;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.json.JSONObject;
 
-//import com.tryg.ca.decoder.kafka.utils.KafkaUtilities;
-//import com.tryg.ca.kstream.avro.utils.Constants;
-
+import java.io.IOException;
+import java.util.Properties;
 
 public class KafkaAvroProducer {
 
@@ -34,10 +25,6 @@ public class KafkaAvroProducer {
         final String schemaRegistryUrl = args.length > 1 ? args[1] : "http://localhost:8081";
 
         final Serde<GenericRecord> valueGenericAvroSerde = new GenericAvroSerde();
-
-        //final SpecificAvroSerde avroSerde = new SpecificAvroSerde();
-
-
 
         Properties producerProperties = producerProperties(bootstrapServers, schemaRegistryUrl);
         KafkaProducer<String, GenericRecord> producer = new KafkaProducer<String, GenericRecord>(producerProperties);
@@ -64,35 +51,6 @@ public class KafkaAvroProducer {
 
         Thread.sleep(1000);
         producer.close();
-    }
-
-    private static byte[] createWrapperMessage(JSONObject data, String schemaString, String caseData)
-            throws IOException {
-        @SuppressWarnings("deprecation")
-        Schema schema = Schema.parse(schemaString);
-
-        GenericDatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<GenericRecord>(schema);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
-        GenericRecord newRecord = new GenericData.Record(schema);
-
-        if ("customer".equals(caseData)) {
-            newRecord.put("customername", data.getString("customername"));
-            newRecord.put("customerid", data.getInt("customerid"));
-            newRecord.put("customeraddress", data.getString("customeraddress"));
-            newRecord.put("customertime", data.getLong("customertime"));
-        } else {
-            newRecord.put("customerid", data.getInt("customerid"));
-            newRecord.put("policynumber", data.getString("policynumber"));
-            newRecord.put("policytime", data.getLong("policytime"));
-        }
-
-        datumWriter.write(newRecord, encoder);
-        encoder.flush();
-        byte[] avroData = out.toByteArray();
-        out.close();
-        return avroData;
-
     }
 
     // COPIED FROM WikipediaFeedAvroExampleDriver

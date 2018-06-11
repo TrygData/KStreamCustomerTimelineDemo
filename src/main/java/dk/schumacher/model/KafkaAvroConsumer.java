@@ -25,29 +25,17 @@ public class KafkaAvroConsumer {
 
         final String bootstrapServers = args.length > 0 ? args[0] : "localhost:9092";
         final String schemaRegistryUrl = args.length > 1 ? args[1] : "http://localhost:8081";
-
         Properties consumerProperties = consumerProperties(bootstrapServers, schemaRegistryUrl, "avro-consumer-group-id");
-
         System.out.println("Properties: " + consumerProperties);
-//        final Serde<GenericRecord> valueGenericAvroSerde = new GenericAvroSerde();
-//        final Serde<String> stringSerde = Serdes.String();
-
         KafkaConsumer<Integer, GenericRecord> consumer = new KafkaConsumer<Integer, GenericRecord>(consumerProperties);
-        //KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(consumerProperties);
         consumer.subscribe(Arrays.asList("CustomerDemoAvro"));
-        //consumer.subscribe(Arrays.asList("STATPEJ.POC_CUSTOMER_DECODED"));
         int i = 0;
         while (true) {
             ConsumerRecords<Integer, GenericRecord> records = consumer.poll(1000);
             for (ConsumerRecord<Integer, GenericRecord> record : records) {
-            //ConsumerRecords<String, String> records = consumer.poll(1000);
-            //for (ConsumerRecord<String, String> record : records) {
-                //byte[] data = record.value();
-                //GenericRecord message = decodeAvroMessage(data);
                 System.out.println(record);
             }
         }
-        //consumer.close();
     }
 
     public static GenericRecord decodeAvroMessage(byte[] message) throws IOException {
