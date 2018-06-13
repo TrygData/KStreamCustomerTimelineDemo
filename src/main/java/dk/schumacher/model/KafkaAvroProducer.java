@@ -8,8 +8,10 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.zookeeper.server.ServerConfig;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -27,7 +29,7 @@ public class KafkaAvroProducer {
         final Serde<GenericRecord> valueGenericAvroSerde = new GenericAvroSerde();
 
         Properties producerProperties = producerProperties(bootstrapServers, schemaRegistryUrl);
-        KafkaProducer<String, GenericRecord> producer = new KafkaProducer<String, GenericRecord>(producerProperties);
+        KafkaProducer<Integer, GenericRecord> producer = new KafkaProducer<Integer, GenericRecord>(producerProperties);
 
         for (int i = 1; i < 20; i++) {
             GenericRecord customer = new GenericData.Record(CUSTOMER_SCHEMA);
@@ -36,7 +38,7 @@ public class KafkaAvroProducer {
             customer.put("customeraddress", "CustomerAddress" + i);
             customer.put("customertime", System.currentTimeMillis());
             System.out.println(customer);
-            producer.send(new ProducerRecord<String, GenericRecord>("CustomerDemoAvro", String.valueOf(i), customer));
+            producer.send(new ProducerRecord<Integer, GenericRecord>("CustomerDemoAvro", new Integer(i), customer));
         }
 
         for (int i = 1; i < 20; i++) {
@@ -45,7 +47,7 @@ public class KafkaAvroProducer {
             policy.put("policynumber", "123456" + i);
             policy.put("policytime", System.currentTimeMillis());
             System.out.println(policy);
-            producer.send(new ProducerRecord<String, GenericRecord>("PolicyDemoAvro", String.valueOf(i), policy));
+            producer.send(new ProducerRecord<Integer, GenericRecord>("PolicyDemoAvro", new Integer(i), policy));
 
         }
 
@@ -57,9 +59,11 @@ public class KafkaAvroProducer {
     private static Properties producerProperties(String bootstrapServers, String schemaRegistryUrl) {
         final Properties prop = new Properties();
         prop.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        prop.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        //prop.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        prop.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class);
         prop.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroSerializer.class);
         prop.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+
         return prop;
     }
 }

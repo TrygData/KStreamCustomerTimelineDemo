@@ -30,6 +30,18 @@ import java.util.Random;
 
 public class KafkaStreamsAvro {
 
+    /* Scripts
+    kafka-topics --zookeeper localhost:2181 --delete --topic CustomerDemoAvro
+    kafka-topics --zookeeper localhost:2181 --create --topic CustomerDemoAvro --partitions 10 --replication-factor 1
+
+    kafka-topics --zookeeper localhost:2181 --delete --topic PolicyDemoAvro
+    kafka-topics --zookeeper localhost:2181 --create --topic PolicyDemoAvro --partitions 10 --replication-factor 1
+
+    kafka-topics --zookeeper localhost:2181 --delete --topic Policy2
+    kafka-topics --zookeeper localhost:2181 --create --topic Policy2 --partitions 10 --replication-factor 1
+
+     */
+
     private static final String APP_ID = "DemoApplications106";
     private static final String CUSTOMER_TOPIC = "CustomerDemoAvro";
     private static final String POLICY_TOPIC = "PolicyDemoAvro";
@@ -47,6 +59,7 @@ public class KafkaStreamsAvro {
 
         StreamsConfig config = new StreamsConfig(avroProperties(bootstrapServers, schemaRegistryUrl));
         final Serde<String> stringSerde = Serdes.String();
+        final Serde<Integer> integerSerde = Serdes.Integer();
         final Serde<byte[]> byteArraySerde = Serdes.ByteArray();
         final SpecificAvroSerde avroSerde = new SpecificAvroSerde();
         final Serde<GenericRecord> valueGenericAvroSerde = new GenericAvroSerde();
@@ -54,14 +67,34 @@ public class KafkaStreamsAvro {
 
         KStreamBuilder kStreamBuilder = new KStreamBuilder();
 
-        KTable<String, GenericRecord> customerKtable = kStreamBuilder.table(stringSerde, valueGenericAvroSerde, CUSTOMER_TOPIC);
-        customerKtable.print();
-        KStream<String, GenericRecord> policyKStream = kStreamBuilder.stream(stringSerde, valueGenericAvroSerde, POLICY_TOPIC);
+        KTable<Integer, GenericRecord> customerKtable = kStreamBuilder.table(integerSerde, valueGenericAvroSerde, CUSTOMER_TOPIC);
+        //customerKtable.print();
+        KStream<Integer, GenericRecord> policyKStream = kStreamBuilder.stream(integerSerde, valueGenericAvroSerde, POLICY_TOPIC);
+//        KTable<String, GenericRecord> policyKTable = kStreamBuilder.table(stringSerde, valueGenericAvroSerde, POLICY_TOPIC);
+//
+//        KStream<String, GenericRecord> neww = policyKStream.selectKey( (key, value) -> String.valueOf(new Random().nextInt(100)));  // TEST change key and output as new stream
+//        neww.to("TEST");
+//
+//        KStream<String, GenericRecord> data = policyKStream.join(customerKtable, new ValueJoiner<GenericRecord, GenericRecord, GenericRecord>(){
+//            @Override
+//            public GenericRecord apply(GenericRecord policyValue, GenericRecord customerValue) {
+//                try {
+//                    System.out.println("CustomerValue: " + customerValue);;
+//                    System.out.println("PolicyValue: " + policyValue);
+//                    return decodeWholeAvroMessageAvro(customerValue, policyValue);
+//                } catch (IOException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            }
+//        });
 
-        KStream<String, GenericRecord> neww = policyKStream.selectKey( (key, value) -> String.valueOf(new Random().nextInt(100)));  // TEST change key and output as new stream
-        neww.to("TEST");
+       KStream<Integer, GenericRecord> neww = policyKStream.selectKey( (key, value) -> (Integer)value.get("customerid"));  // TEST change key and output as new stream
+       neww.to("Policy2");
 
-        KStream<String, GenericRecord> data = policyKStream.join(customerKtable, new ValueJoiner<GenericRecord, GenericRecord, GenericRecord>(){
+       KTable<Integer, GenericRecord> policy2Ktable = kStreamBuilder.table(integerSerde, valueGenericAvroSerde, "Policy2");
+//        policy2Ktable.print();
+
+        KTable<Integer, GenericRecord> data2 = policy2Ktable.join(customerKtable, new ValueJoiner<GenericRecord, GenericRecord, GenericRecord>(){
             @Override
             public GenericRecord apply(GenericRecord policyValue, GenericRecord customerValue) {
                 try {
@@ -74,8 +107,8 @@ public class KafkaStreamsAvro {
             }
         });
 
-        data.print(Serdes.String(), avroSerde);
-        data.to(stringSerde, valueGenericAvroSerde, "FINAL_DEMO_OUTPUT105");
+        data2.print(integerSerde, avroSerde);
+        data2.to(integerSerde, valueGenericAvroSerde, "JoinDemoAvro");
 
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.cleanUp();
@@ -91,6 +124,7 @@ public class KafkaStreamsAvro {
         GenericRecord newRecord = new GenericData.Record(WHOLE);
 
         List<Field> fields = newRecord.getSchema().getFields();
+        fields.get(0).schema();
 
         newRecord.put("CustomerList", customer.toString());
         newRecord.put("policyList", policy.toString());
@@ -104,7 +138,8 @@ public class KafkaStreamsAvro {
         Properties settings = new Properties();
         settings.put(StreamsConfig.APPLICATION_ID_CONFIG, APP_ID);
         settings.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        //settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        settings.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Integer().getClass());
         //settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroSerializer.class);
         settings.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, GenericAvroSerde.class);
         settings.put(StreamsConfig.VALUE_SERDE_CLASS_CONFIG, GenericAvroSerde.class);
@@ -113,7 +148,7 @@ public class KafkaStreamsAvro {
         settings.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
 
         // See: https://www.confluent.io/blog/enabling-exactly-kafka-streams/
-        settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+        //settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
 
         return settings;
     }
