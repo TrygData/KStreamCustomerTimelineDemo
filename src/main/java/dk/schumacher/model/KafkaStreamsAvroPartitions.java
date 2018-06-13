@@ -115,19 +115,10 @@ public class KafkaStreamsAvroPartitions { // Test join of streams
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.cleanUp();
         kafkaStreams.start();
-
     }
 
     public static GenericRecord decodeWholeAvroMessageAvro(GenericRecord customer, GenericRecord policy) throws IOException {
-
-        GenericDatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<GenericRecord>(WHOLE);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
         GenericRecord newRecord = new GenericData.Record(WHOLE);
-
-        List<Field> fields = newRecord.getSchema().getFields();
-        fields.get(0).schema();
-
         newRecord.put("CustomerList", customer.toString());
         newRecord.put("policyList", policy.toString());
         System.out.println("Data1: " + customer);
