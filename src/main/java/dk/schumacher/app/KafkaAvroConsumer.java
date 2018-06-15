@@ -1,9 +1,10 @@
-package dk.schumacher.model;
+package dk.schumacher.app;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Properties;
 
+import dk.schumacher.model.Constants;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
@@ -19,7 +20,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 
 public class KafkaAvroConsumer {
     @SuppressWarnings("deprecation")
-    private final static Schema CUSTOMER_SCHEMA = Schema.parse(dk.schumacher.avro.Constants.CUSTOMER_SCHEMA);
+    private final static Schema CUSTOMER_SCHEMA = Schema.parse(Constants.CUSTOMER_SCHEMA);
 
     public static void main(String[] args) throws IOException {
 

@@ -1,5 +1,6 @@
-package dk.schumacher.model;
+package dk.schumacher.app;
 
+import dk.schumacher.model.Constants;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
 import org.apache.avro.Schema;
@@ -10,16 +11,14 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.apache.zookeeper.server.ServerConfig;
 
 import java.io.IOException;
 import java.util.Properties;
 
 public class KafkaAvroProducer {
 
-    private final static Schema POLICY_SCHEMA = Schema.parse(dk.schumacher.avro.Constants.POLICY_SCHEMA);
-    private final static Schema CUSTOMER_SCHEMA = Schema.parse(dk.schumacher.avro.Constants.CUSTOMER_SCHEMA);
+    private final static Schema POLICY_SCHEMA = Schema.parse(Constants.POLICY_SCHEMA);
+    private final static Schema CUSTOMER_SCHEMA = Schema.parse(Constants.CUSTOMER_SCHEMA);
 
     public static void main(String[] args) throws IOException, InterruptedException {
 
