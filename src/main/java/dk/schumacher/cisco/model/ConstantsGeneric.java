@@ -2,7 +2,6 @@ package dk.schumacher.cisco.model;
 
 import dk.schumacher.util.AvroRecordBuilder;
 import dk.schumacher.util.AvroRecordBuilder.Wrapper;
-//import dk.schumacher.util.AvroRecordBuilder.Field;
 
 public class ConstantsGeneric {
 

@@ -1,10 +1,7 @@
 package dk.schumacher.cisco.app;
 
-//import dk.schumacher.cisco.model.Constants;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -30,15 +27,6 @@ public class KafkaAvroProducerGeneric {
 
      */
 
-//    protected final static Schema TERM_CALL_DETAIL_SCHEMA = Schema.parse(Constants.TERM_CALL_DETAIL);
-//    protected final static Schema CALL_TYPE_SCHEMA = Schema.parse(Constants.CALL_TYPE);
-//    protected final static Schema CISCO_WHOLE_SCHEMA = Schema.parse(Constants.CISCO_WHOLE);
-//
-//
-//    protected static final String TERM_CALL_DETAIL_TOPIC = "TermCallDetail";
-//    protected static final String CALL_TYPE_TOPIC = "CallType";
-    protected static final String CISCO_WHOLE_TOPIC = "CiscoWhole";
-
     public static void main(String[] args) throws IOException, InterruptedException {
 
         final String bootstrapServers = args.length > 0 ? args[0] : "localhost:9092";
@@ -53,7 +41,6 @@ public class KafkaAvroProducerGeneric {
             GenericRecord callDetail = TERM_CALL_DETAIL.getGenericRecord();
             callDetail.put("agentSkillTargetID", generate_agentSkillTargetID(i));
             callDetail.put("callTypeId", generate_agentSkillTargetID(i));
-            //callDetail.put("skillTargetId", generate_skillTargetID(i));
             callDetail.put("aNI", randomNumber(8));
             callDetail.put("digitsDialed", generate_skillTargetID(i));
             System.out.println(callDetail);
@@ -68,12 +55,6 @@ public class KafkaAvroProducerGeneric {
 
         }
 
-        /*
-
-            new Field("callTypeId", "int"),
-            new Field("enterpriseName", "string")
-         */
-
         Thread.sleep(1000);
         producer.close();
     }
@@ -82,7 +63,6 @@ public class KafkaAvroProducerGeneric {
     private static Properties producerProperties(String bootstrapServers, String schemaRegistryUrl) {
         final Properties prop = new Properties();
         prop.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        //prop.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         prop.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class);
         prop.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroSerializer.class);
         prop.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);

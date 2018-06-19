@@ -1,27 +1,25 @@
 package dk.schumacher.cisco.app;
 
-import dk.schumacher.cisco.model.ConstantsGeneric;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
-import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.kstream.GlobalKTable;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KStreamBuilder;
+import org.apache.kafka.streams.kstream.ValueJoiner;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Properties;
 
-import static dk.schumacher.cisco.model.ConstantsGeneric.CALL_TYPE;
-import static dk.schumacher.cisco.model.ConstantsGeneric.CISCO_WHOLE;
-import static dk.schumacher.cisco.model.ConstantsGeneric.TERM_CALL_DETAIL;
+import static dk.schumacher.cisco.model.ConstantsGeneric.*;
 
 //import static dk.schumacher.cisco.app.KafkaAvroProducer.*;
 
@@ -86,10 +84,7 @@ public class KafkaStreamsAvroPartitionsGeneric {
         System.out.println("CISCO_WHOLE_SCHEMA: " + CISCO_WHOLE.getSchema());
         GenericRecord ciscoWhole = new GenericData.Record(CISCO_WHOLE.getSchema());
         copyField(ciscoWhole, callDetail, "agentSkillTargetID");
-        ////copyField(ciscoWhole, callDetail, "personId");
         copyField(ciscoWhole, callDetail, "callTypeId");
-        //copyField(ciscoWhole, callDetail, "skillTargetId");
-        ////copyField(ciscoWhole, callDetail, "agentTeamId");
         copyField(ciscoWhole, callDetail, "aNI");
         copyField(ciscoWhole, callDetail, "digitsDialed");
         //

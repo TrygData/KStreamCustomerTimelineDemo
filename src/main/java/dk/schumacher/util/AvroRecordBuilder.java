@@ -1,13 +1,8 @@
 package dk.schumacher.util;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import dk.schumacher.model.Messages;
 import org.apache.avro.Schema;
-import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.codehaus.jackson.annotate.JsonIgnore;
@@ -40,7 +35,6 @@ public class AvroRecordBuilder {
             this.tableName=tableName;
             return this;
         }
-
 
         @JsonIgnore
         Schema _schema = null;
@@ -97,41 +91,12 @@ public class AvroRecordBuilder {
 
         public Wrapper clone() throws CloneNotSupportedException {
             Wrapper clonedObj = (Wrapper)super.clone();
-            //clonedObj._fields=this._fields.clone();
             clonedObj._fields = new HashMap<String, FieldAbstract>();
             for (FieldAbstract field : _fields.values())
                 clonedObj._fields.put(field.name, field.clone());
             return clonedObj;
         }
     }
-//
-//    static public class Field extends Messages.JsonToString {
-//        public String name ="fieldName";
-//        @JsonIgnore
-//        public String _type = "string";  // string / int
-//        @JsonIgnore
-//        public boolean _option = false;
-//
-//        @JsonProperty
-//        public Object getType() {
-//            if (_option) {
-//                return new String[]{"null", _type};
-//            } else {
-//                return _type;
-//            }
-//        }
-//
-//        public Field(String name, String type) {
-//            this.name = name;
-//            this._type = type;
-//        }
-//
-//        public Field(String name, String type, boolean option) {
-//            this.name = name;
-//            this._type = type;
-//            this._option=option;
-//        }
-//    }
 
     public static abstract class FieldAbstract extends Messages.JsonToString  implements Cloneable {
         public String name ="fieldName";
@@ -196,8 +161,6 @@ public class AvroRecordBuilder {
     }
 
     public static void main(String[] args) {
-//        Wrapper m = new Wrapper(new Field("customerName", "string"), new Field("policyName", "string"));
-//        System.out.println(m.toString());
 
         Wrapper a = new Wrapper(
                 new FieldInt("agentSkillTargetID"),
