@@ -1,4 +1,4 @@
-package dk.schumacher.avro;
+package dk.schumacher.model;
 
 public class Constants {
 
