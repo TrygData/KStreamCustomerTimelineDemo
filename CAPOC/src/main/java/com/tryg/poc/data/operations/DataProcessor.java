@@ -39,7 +39,7 @@ import com.tryg.poc.util.KstreamUtil;
  * Description Class defines processing logic of Kstream data
 * @author Joseph James 
 * @version 1.0
- * @param <T>
+* @param <T>
 * @see 
 * @updated by  
 * @updated date 
@@ -113,8 +113,6 @@ public class DataProcessor<T> {
 	 * @throws IllegalAccessException
 	 * @throws InstantiationException
 	 */
-	
-
 	private KTable<String, ClaimPaymentMap> retriveKeyAggregateData(KStream<String, ClaimPaymentClaimJoined> stream) throws IllegalAccessException, InstantiationException {
 		return stream.groupBy((k, claimPay) -> (claimPay != null)? claimPay.claim.iterator().next().
 		CLAIMNUMBER.split("_")[0]: "999", Constants.stringSerde, SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(ClaimPaymentClaimJoined.class),
