@@ -6,10 +6,9 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.codehaus.jackson.annotate.JsonIgnore;
+import sun.tools.java.Type;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Gøran Schumacher (GS) / Schumacher Consulting Aps
@@ -60,11 +59,24 @@ public class AvroRecordBuilder {
             }
         }
 
+        public static Wrapper createFromAvroSchema(Schema schema) {
+            FieldAbstract[] fields = new FieldAbstract[schema.getFields().size()];
+            for (int i = 0; i < schema.getFields().size(); i++) {
+                fields[i] = FieldAbstract.createFromAvroSchema(schema.getFields().get(i));
+            }
+            return new Wrapper(fields);
+        }
+
         @JsonProperty
         public Collection<FieldAbstract> getFields() {
             return _fields.values();
         }
 
+        /**
+         * Creates a new output schema ferom this and wrapper.
+         * @param wrapper
+         * @return
+         */
         public Wrapper mergeSchema(Wrapper wrapper) {
             Wrapper clone = null;
             try {
@@ -96,7 +108,36 @@ public class AvroRecordBuilder {
                 clonedObj._fields.put(field.name, field.clone());
             return clonedObj;
         }
-    }
+
+
+        /**
+         * Should be called from the to entry
+         * @param from
+         * @param to
+         */
+        public void copyFieldsTo(GenericRecord from, GenericRecord to) {
+            for (FieldAbstract field : _fields.values()) {
+                if(from.get(field.name) == null) {
+                    System.out.println("Field " + field.name + " is null!!!");
+                } else {
+                    to.put(field.name, from.get(field.name));
+                }
+            }
+        }
+
+        public GenericRecord copyFields(GenericRecord from1, GenericRecord from2) {
+            GenericRecord out = getGenericRecord();
+            for (FieldAbstract field : _fields.values()) {
+                if(from1.get(field.name) != null)
+                    out.put(field.name, from1.get(field.name));
+                if(from2 != null) {
+                    if(from2.get(field.name) != null)
+                        out.put(field.name, from2.get(field.name));
+                }
+            }
+            return out;
+        }
+}
 
     public static abstract class FieldAbstract extends Messages.JsonToString  implements Cloneable {
         public String name ="fieldName";
@@ -126,6 +167,26 @@ public class AvroRecordBuilder {
         public FieldAbstract clone() throws CloneNotSupportedException {
             FieldAbstract clonedObj = (FieldAbstract)super.clone();
             return clonedObj;
+        }
+
+        public static FieldAbstract createFromAvroSchema(Schema.Field field) {
+            switch (findTypeFromField(field)) {
+                case INT:
+                    return new FieldInt(field.name(), field.schema().getType().getName().equals("union"));
+                case STRING:
+                    return new FieldString(field.name(), field.schema().getType().getName().equals("union"));
+                default:
+                    return null;
+            }
+        }
+
+        private static Schema.Type findTypeFromField(Schema.Field field) {
+            if(field.schema().getType().getName().equals("union")) {
+                System.out.println("UNION");
+                return field.schema().getTypes().get(1).getType();
+            } else {
+                return field.schema().getType();
+            }
         }
     }
 

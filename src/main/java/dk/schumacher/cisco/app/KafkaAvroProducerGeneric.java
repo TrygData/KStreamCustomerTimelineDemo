@@ -1,5 +1,6 @@
 package dk.schumacher.cisco.app;
 
+import dk.schumacher.util.AvroRecordBuilder;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
 import org.apache.avro.generic.GenericRecord;
@@ -44,6 +45,9 @@ public class KafkaAvroProducerGeneric {
             callDetail.put("aNI", randomNumber(8));
             callDetail.put("digitsDialed", generate_skillTargetID(i));
             System.out.println(callDetail);
+            System.out.println("TERM_CALL_DETAIL_SCHEMA1: " + callDetail.getSchema().getFields().get(1).schema());
+            AvroRecordBuilder.Wrapper w = AvroRecordBuilder.Wrapper.createFromAvroSchema(callDetail.getSchema());
+            System.out.println("TERM_CALL_DETAIL_SCHEMA2: " + w);
             producer.send(new ProducerRecord<Integer, GenericRecord>(TERM_CALL_DETAIL.topicName, new Integer(i), callDetail));
 
             GenericRecord callType = CALL_TYPE.getGenericRecord();
@@ -51,8 +55,6 @@ public class KafkaAvroProducerGeneric {
             callType.put("enterpriseName", "Call type Description: " + i);
             System.out.println(callType);
             producer.send(new ProducerRecord<Integer, GenericRecord>(CALL_TYPE.topicName, new Integer(i), callType));
-
-
         }
 
         Thread.sleep(1000);
@@ -71,15 +73,15 @@ public class KafkaAvroProducerGeneric {
     }
 
     static private int generate_agentSkillTargetID(int seed) {
-        return seed % 20 + 1;
+        return seed % 20;
     }
 
     static private String generate_skillTargetID(int seed) {
-        return String.valueOf(seed % 20 + 1);
+        return String.valueOf(seed % 20);
     }
 
     static private String generate_digitsDialed(int seed) {
-        return String.valueOf(seed % 20 + 1);
+        return String.valueOf(seed % 20);
     }
 
     static public String randomNumber(int length) {

@@ -9,9 +9,9 @@ public class ConstantsGeneric {
             new AvroRecordBuilder.FieldInt("agentSkillTargetID"),  // Agents Id
             new AvroRecordBuilder.FieldInt("callTypeId"),
             new AvroRecordBuilder.FieldString("aNI"),                 // Callers number
-            new AvroRecordBuilder.FieldString("digitsDialed")         // Called number
+            new AvroRecordBuilder.FieldString("digitsDialed", true)         // Called number
     )
-            .setTopicName("TermCallDetail2")
+            .setTopicName("TermCallDetailX")
             .setTableName("");
 
     public final static Wrapper CALL_TYPE = new Wrapper(
