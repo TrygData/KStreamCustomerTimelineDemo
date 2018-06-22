@@ -26,13 +26,14 @@ public class KafkaUtilities {
 	 * @return properties
 	 */
 	public static Properties getConsumerProperites() {
-		
+		System.out.println("====="+Constants.KafkaServers+":"+Constants.KafkaBootStrapPort);
 		Properties props = new Properties();
 		props.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, Constants.KafkaServers+":"+Constants.KafkaBootStrapPort);
 		props.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "streams" + System.currentTimeMillis());
 		props.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, Constants.AUTO_OFFSET_RESET_CONFIG);
 		props.setProperty(StreamsConfig.KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
 		props.setProperty(StreamsConfig.VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+		//props.put("enable.auto.commit", "true"); 
 
 		return props;
 
@@ -48,6 +49,7 @@ public class KafkaUtilities {
 		props.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, Constants.KafkaServers+":"+Constants.KafkaBootStrapPort);
 		props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 		props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+		//props.put("enable.auto.commit", "true"); 
 
 		return props;
 

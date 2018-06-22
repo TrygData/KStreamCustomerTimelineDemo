@@ -15,6 +15,30 @@ package com.tryg.poc.data;
 public class Customer {
 
 	public String POLICY;
+	public String getPOLICY() {
+		return POLICY;
+	}
+	public void setPOLICY(String pOLICY) {
+		POLICY = pOLICY;
+	}
+	public String getADDRESS() {
+		return ADDRESS;
+	}
+	public void setADDRESS(String aDDRESS) {
+		ADDRESS = aDDRESS;
+	}
+	public String getCUSTOMER() {
+		return CUSTOMER;
+	}
+	public void setCUSTOMER(String cUSTOMER) {
+		CUSTOMER = cUSTOMER;
+	}
+	public double getCUSTOMERTIME() {
+		return CUSTOMERTIME;
+	}
+	public void setCUSTOMERTIME(double cUSTOMERTIME) {
+		CUSTOMERTIME = cUSTOMERTIME;
+	}
 	public String ADDRESS;
 	public String CUSTOMER;
 	public double CUSTOMERTIME;

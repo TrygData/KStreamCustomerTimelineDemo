@@ -2,7 +2,7 @@
  *  @ KstreamMain.java v1.0   16/05/2018 
  *  
  *  */ 
-package com.tyryg.poc;
+package com.tryg.poc;
 
 import com.tryg.poc.data.operations.DataProcessor;
 import com.tryg.poc.util.Utilties;

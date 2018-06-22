@@ -20,7 +20,7 @@ import org.apache.kafka.common.serialization.Serializer;
 * @updated date 
 * @Copy 
 */ 
-public class JSONSerdeUtils {
+public class SerdeUtils {
 	/**
 	 * Method convert a POJO class into serialized format
 	 * @param input POJO class
@@ -63,5 +63,17 @@ public class JSONSerdeUtils {
 	{
 		 return Serdes.serdeFrom(input,output);
 	}
+	
+	/**
+	 * @param class type of serde
+	 * 
+	 * 
+	 */
+	  public static <T> Serde<T> getSerdefromClass(Class<T> inputClass) { 
+		         
+				return Serdes.serdeFrom(inputClass);
+				
+		      } 
+
 	
 }

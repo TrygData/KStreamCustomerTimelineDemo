@@ -22,10 +22,14 @@ public class Constants {
 	/*kafka Topics */
 	
 	//public static final String customerTopic = "STATPEJ.POC_CUSTOMER_DECODED";
-	public static final String customerTopic = "demo_customer";
-	public static final String PolicyTopic = "STATPEJ.POC_POLICY_DECODED";
-	public static final String claimTopic = "STATPEJ.POC_CLAIM_DECODED";
-	public static final String claimPaymentTopic = "STATPEJ.POC_CLAIMPAYMENT_DECODED";
+	//public static final String customerTopic = "demo_customer";
+	public static final String customerTopic = "test_customer";
+	public static final String PolicyTopic = "test_policy";
+	//public static final String PolicyTopic = "STATPEJ.POC_POLICY_DECODED";
+	//public static final String claimTopic = "STATPEJ.POC_CLAIM_DECODED";
+	public static final String claimTopic = "test_claim";
+	//public static final String claimPaymentTopic = "STATPEJ.POC_CLAIMPAYMENT_DECODED";
+	public static final String claimPaymentTopic = "test_claimpolicy";
 	public static final String POLICY_STORE = "PolicyStore";
 	public static final String CUSTOMER_STORE = "CustomerStore";
 	public static final String CLAIM_STORE = "ClaimStrStore";
@@ -40,7 +44,8 @@ public class Constants {
 	
 	/*kafka properties*/
 	
-	public static  String KafkaServers = "10.84.0.21";
+	//public static  String KafkaServers = "wn0-kaf001.si34agdvrydetneynufspu4j5a.fx.internal.cloudapp.net:9092,wn1-kaf001.si34agdvrydetneynufspu4j5a.fx.internal.cloudapp.net:9092,wn2-kaf001.si34agdvrydetneynufspu4j5a.fx.internal.cloudapp.net:9092,wn3-kaf001.si34agdvrydetneynufspu4j5a.fx.internal.cloudapp.net";
+	public static  String KafkaServers = "10.84.0.19";
 	public static  String KafkaBootStrapPort = "9092";
 	public static  String AUTO_OFFSET_RESET_CONFIG="earliest";
 }

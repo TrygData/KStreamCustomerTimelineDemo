@@ -65,12 +65,32 @@ public class KstreamUtil {
 	 {
 		 KStream<String, customClass> kStream=null;
 		 try {
-			kStream = builder.stream(Constants.stringSerde, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(customClass),
-					  JSONSerdeUtils.getJSONDeSerializer(customClass)), inputTopic);
+			kStream = builder.stream(Constants.stringSerde, SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(customClass),
+					  SerdeUtils.getJSONDeSerializer(customClass)), inputTopic);
 		} catch (IllegalAccessException | InstantiationException e) {
 			e.printStackTrace();
 		}
 		return kStream;
 		 
 	 }
+	
+	/**
+	 * @param Kstreambuilder
+	 * @param inputtopic
+	 * @param custoemClass
+	 * @throws InstantiationException 
+	 * @throws IllegalAccessException 
+	 * 
+	 * 
+	 */
+	@SuppressWarnings("unchecked")
+	public <K, V> KStream<K, V> getKstream(KStreamBuilder builder,String inputTopic,Class<V> customClass,Class<K> keyType) throws IllegalAccessException, InstantiationException
+	 {
+		
+		
+		return builder.stream(SerdeUtils.getSerdefromClass(keyType), SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(customClass),
+				  SerdeUtils.getJSONDeSerializer(customClass)), inputTopic);
+		 
+	 }
+	
 }

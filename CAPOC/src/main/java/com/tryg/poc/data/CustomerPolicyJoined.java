@@ -3,6 +3,9 @@
  *  
  *  */ 
 package com.tryg.poc.data;
+
+import java.util.ArrayList;
+
 /** 
  * Description  POJO Class stores  list of joined data for customer and policy
 * @author Joseph  
@@ -16,6 +19,8 @@ public class CustomerPolicyJoined {
 
 	public CustomerList customerList = new CustomerList();
 	public PolicyList policyList = new PolicyList();
+	public ArrayList<Customer> customer=new ArrayList<>();
+	public ArrayList<Policy> policy=new ArrayList<>();
 
 	public CustomerPolicyJoined(CustomerList customerList, PolicyList policyList) {
 
@@ -25,6 +30,11 @@ public class CustomerPolicyJoined {
 
 	public CustomerPolicyJoined() {
 
+	}
+
+	public CustomerPolicyJoined(ArrayList<Customer> customer, ArrayList<Policy> policy) {
+		this.customer = customer;
+		this.policy = policy;
 	}
 
 }

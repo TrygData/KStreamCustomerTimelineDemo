@@ -16,6 +16,30 @@ package com.tryg.poc.data;
 public class ClaimPayment {
 
 	public Double PAYMENT;
+	public Double getPAYMENT() {
+		return PAYMENT;
+	}
+	public void setPAYMENT(Double pAYMENT) {
+		PAYMENT = pAYMENT;
+	}
+	public Double getPAYTIME() {
+		return PAYTIME;
+	}
+	public void setPAYTIME(Double pAYTIME) {
+		PAYTIME = pAYTIME;
+	}
+	public Integer getCLAIMCOUNTER() {
+		return CLAIMCOUNTER;
+	}
+	public void setCLAIMCOUNTER(Integer cLAIMCOUNTER) {
+		CLAIMCOUNTER = cLAIMCOUNTER;
+	}
+	public String getCLAIMNUMBER() {
+		return CLAIMNUMBER;
+	}
+	public void setCLAIMNUMBER(String cLAIMNUMBER) {
+		CLAIMNUMBER = cLAIMNUMBER;
+	}
 	public Double PAYTIME;
 	public Integer CLAIMCOUNTER;
 	public String CLAIMNUMBER;

@@ -21,7 +21,7 @@ public class CustomerView {
 
 	}
 
-	public int cutomerKey;
+	public String cutomerKey;
 	public ArrayList<Customer> customerRecords = new ArrayList<>();
 	public ArrayList<Policy> policyRecords = new ArrayList<>();
 	public ArrayList<Claim> claimRecords = new ArrayList<>();

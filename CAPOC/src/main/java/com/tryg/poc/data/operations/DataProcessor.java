@@ -6,10 +6,16 @@
 
 package com.tryg.poc.data.operations;
 
+import java.util.ArrayList;
+import java.util.function.Function;
+
+
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KStreamBuilder;
 import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.KeyValueMapper;
 import org.apache.kafka.streams.kstream.Predicate;
+
 
 import com.tryg.poc.data.Claim;
 import com.tryg.poc.data.ClaimList;
@@ -24,21 +30,23 @@ import com.tryg.poc.data.CustomerPolicyJoined;
 import com.tryg.poc.data.CustomerView;
 import com.tryg.poc.data.Policy;
 import com.tryg.poc.data.PolicyList;
+import com.tryg.poc.util.ArrayListSerde;
 import com.tryg.poc.util.Constants;
-import com.tryg.poc.util.JSONSerdeUtils;
+import com.tryg.poc.util.SerdeUtils;
 import com.tryg.poc.util.KstreamUtil;
 
 /** 
  * Description Class defines processing logic of Kstream data
 * @author Joseph James 
 * @version 1.0
+ * @param <T>
 * @see 
 * @updated by  
 * @updated date 
 * @Copy 
 */ 
 
-public class DataProcessor {
+public class DataProcessor<T> {
 
 	KstreamUtil obKstreamUtil=new KstreamUtil();
 
@@ -55,35 +63,43 @@ public class DataProcessor {
 		
 		/** create KStream from different data topics*/
 		
-		KStream<String, Customer> customerKStream=obKstreamUtil.getStringKeyKstream(builder, Constants.customerTopic, Customer.class);
-		KStream<String, Policy> policyKStream=obKstreamUtil.getStringKeyKstream(builder, Constants.PolicyTopic, Policy.class);
-		KStream<String, Claim> claimStream = obKstreamUtil.getStringKeyKstream(builder, Constants.claimTopic, Claim.class);
-		KStream<String, ClaimPayment> ClaimPaymentKStream = obKstreamUtil.getStringKeyKstream(builder, Constants.claimPaymentTopic, 
-				ClaimPayment.class);
+		KStream<String, Customer> customerKStream1=obKstreamUtil.getKstream(builder, Constants.customerTopic, Customer.class,String.class);
+		KStream<String, Policy> policyKStream1=obKstreamUtil.getKstream(builder, Constants.PolicyTopic, Policy.class,String.class);
+		KStream<String, Claim> claimStream1 = obKstreamUtil.getKstream(builder, Constants.claimTopic, Claim.class,String.class);
+		KStream<String, ClaimPayment> ClaimPaymentKStream1 = obKstreamUtil.getKstream(builder, Constants.claimPaymentTopic,ClaimPayment.class,String.class);
 		
-		/**create KTables from the filtered and grouped data from different topics*/
+	
+		/**Customized function 	to get specific records*/	
+		Function<Claim, String> claimFunction = Claim:: getCLAIMNUMBER; 
+		Function<ClaimPayment, String> ClaimPaymentFunction = ClaimPayment:: getCLAIMNUMBER;
+		Function<Customer, String> CustomerFunction = Customer:: getPOLICY;
+		Function<Policy, String> policyFunction = Policy:: getPOLICY ;
 		
-		KTable<String, ClaimList> claimStrGroupedData =aggregateClaimGrupedData(claimStream.filter(claimValidate()));
-		KTable<String, ClaimPaymentList> paymentGroupedData=aggregateClaimPaymentGroupedData(ClaimPaymentKStream.filter(claimpaymentValidate()));
-		KTable<Integer, CustomerList> customerGroupedData=aggregateCustomerGroupedData(customerKStream.filter(customerValidate()));
-		KTable<Integer, PolicyList> policyGroupedData =aggregatePolicyGrupedData(policyKStream.filter(policyValidate()));
+		/**create KTables from grouped data from different topics*/
+		
+		KTable<String, ArrayList<Claim>> claimStrGroupedData1 = groupAndAggregateItems(claimStream1,String.class,Claim.class,claimFunction);
+		KTable<String, ArrayList<ClaimPayment>> paymentGroupedData1 = groupAndAggregateItems(ClaimPaymentKStream1,String.class,ClaimPayment.class,ClaimPaymentFunction);
+		KTable<String, ArrayList<Customer>> customerGroupedData1 = groupAndAggregateItems(customerKStream1,String.class,Customer.class,CustomerFunction);
+		KTable<String, ArrayList<Policy>> policyGrupedData1 = groupAndAggregateItems(policyKStream1,String.class,Policy.class,policyFunction);
 		
 		/**Join data from aggregated Claim topic and ClaimPayment topic*/
+
 		
-		KTable<String, ClaimPaymentClaimJoined> claimpaymentandClainmGrouped = claimStrGroupedData
-				.leftJoin(paymentGroupedData, (claim, payment) -> new ClaimPaymentClaimJoined(payment, claim));
-		KTable<Integer, CustomerPolicyJoined> customerAndPolicyGroupedKTable = customerGroupedData
-				.join(policyGroupedData, (customer, policy) -> new CustomerPolicyJoined(customer, policy));
-		KTable<Integer, ClaimPaymentMap> claimAndPayment2IntGroupedTable=retriveKeyAggregateData(claimpaymentandClainmGrouped.toStream());
-		KTable<Integer, CustomerPolicyClaimPayment> finalData = customerAndPolicyGroupedKTable.leftJoin(
-				claimAndPayment2IntGroupedTable, (left, right) -> new CustomerPolicyClaimPayment(left, right));
+		KTable<String, ClaimPaymentClaimJoined> claimpaymentandClainmGrouped1 = claimStrGroupedData1
+				.leftJoin(paymentGroupedData1, (claim, payment) -> new ClaimPaymentClaimJoined(payment, claim));
+		KTable<String, CustomerPolicyJoined> customerAndPolicyGroupedKTable1 = customerGroupedData1
+				.join(policyGrupedData1, (customer, policy) -> new CustomerPolicyJoined(customer, policy));
+		KTable<String, ClaimPaymentMap> claimAndPayment2IntGroupedTable1=retriveKeyAggregateData(claimpaymentandClainmGrouped1.toStream());
+		KTable<String, CustomerPolicyClaimPayment> finalData1 = customerAndPolicyGroupedKTable1.leftJoin(
+				claimAndPayment2IntGroupedTable1, (left, right) -> new CustomerPolicyClaimPayment(left, right));
+
 		
 		/**Create complete view for the final data joined from different topics*/
 		
-		KTable<Integer, CustomerView> customerView  =createDataView(finalData);
+		KTable<String, CustomerView> customerView  = createDataView1(finalData1);
 		customerView.print();
-		customerView.through(Constants.integerSerde, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(CustomerView.class),
-		JSONSerdeUtils.getJSONDeSerializer(CustomerView.class)), Constants.CUSTOMER_VIEW_OUT);
+		customerView.through(Constants.stringSerde, SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(CustomerView.class),
+		SerdeUtils.getJSONDeSerializer(CustomerView.class)), Constants.CUSTOMER_VIEW_OUT);
 		
 		/**start the kafka streams*/
 		 
@@ -98,99 +114,62 @@ public class DataProcessor {
 	 * @throws InstantiationException
 	 */
 	
-	private KTable<Integer, ClaimPaymentMap> retriveKeyAggregateData(KStream<String, ClaimPaymentClaimJoined> stream) throws IllegalAccessException, InstantiationException {
-		return stream.groupBy((k, claimPay) -> (claimPay != null)? Integer.parseInt(claimPay.claimList.claimRecords.get(0).
-		CLAIMNUMBER.split("_")[0]): 999, Constants.integerSerde, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(ClaimPaymentClaimJoined.class),
-		JSONSerdeUtils.getJSONDeSerializer(ClaimPaymentClaimJoined.class)))
+
+	private KTable<String, ClaimPaymentMap> retriveKeyAggregateData(KStream<String, ClaimPaymentClaimJoined> stream) throws IllegalAccessException, InstantiationException {
+		return stream.groupBy((k, claimPay) -> (claimPay != null)? claimPay.claim.iterator().next().
+		CLAIMNUMBER.split("_")[0]: "999", Constants.stringSerde, SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(ClaimPaymentClaimJoined.class),
+		SerdeUtils.getJSONDeSerializer(ClaimPaymentClaimJoined.class)))
 		.aggregate(ClaimPaymentMap::new, (claimKey, claimPay, claimAndPay2) -> {
 				claimAndPay2.add(claimPay);
 				return claimAndPay2;
-		}, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(ClaimPaymentList.class),
-		JSONSerdeUtils.getJSONDeSerializer(ClaimPaymentMap.class)), Constants.CLAIM_AND_PAYMENT_STORE);
+		}, SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(ClaimPaymentList.class),
+		SerdeUtils.getJSONDeSerializer(ClaimPaymentMap.class)), Constants.CLAIM_AND_PAYMENT_STORE);
 	}
 	
-	/**
-	 * create KTable from Grouped aggregated Data for Policy
-	 * @param policyKStream
-	 * @return KTable
+	
+	/***
+	 * get the grouped and aggregated data from Kstream
+	 * @param stream
+	 * @param keyClass
+	 * @param valueClass
+	 * @param keyFunc
+	 * @param collectionvalueClass
+	 * @return
 	 * @throws IllegalAccessException
 	 * @throws InstantiationException
 	 */
 	
-	private KTable<Integer, PolicyList> aggregatePolicyGrupedData(KStream<String, Policy> policyKStream) throws IllegalAccessException, InstantiationException {
-		return policyKStream.groupBy((k, policy) -> Integer.parseInt(policy.POLICY), Constants.integerSerde, 
-		JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(Policy.class),	JSONSerdeUtils.getJSONDeSerializer(Policy.class)))
-		.aggregate(PolicyList::new, (policyKey, policy, policyLst) -> {
-				policyLst.PolicyRecords.add(policy);
-				return (policyLst);
-		}, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(PolicyList.class),
-		JSONSerdeUtils.getJSONDeSerializer(PolicyList.class)), Constants.POLICY_STORE);
-	}
-	
-	/**
-	 * create KTable from Grouped aggregated Data from Policy
-	 * @param customerKStream
-	 * @return KTable
-	 * @throws IllegalAccessException
-	 * @throws InstantiationException
-	 */
-	
-	private KTable<Integer, CustomerList> aggregateCustomerGroupedData(KStream<String, Customer> customerKStream) throws IllegalAccessException, InstantiationException {
-		return customerKStream.groupBy((key, value) -> Integer.parseInt(value.POLICY), Constants.integerSerde, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(Customer.class),
-		JSONSerdeUtils.getJSONDeSerializer(Customer.class))).aggregate(CustomerList::new, (ckey, custMessage, customerList) -> {
-			customerList.CustomerRecords.add(custMessage);
-			return customerList;
-		}, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(CustomerList.class),
-		JSONSerdeUtils.getJSONDeSerializer(CustomerList.class)), Constants.CUSTOMER_STORE);
-	}
+	public <V, K> KTable<K, ArrayList<V>> groupAndAggregateItems(KStream<?, V> stream, Class<K> keyClass, Class<V> valueClass, Function<V, K> keyFunc) throws IllegalAccessException, InstantiationException { 
+    
+        return stream 
+                .selectKey((key, value) -> keyFunc.apply(value)).groupByKey(
+               		 SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(keyClass),SerdeUtils.getJSONDeSerializer(keyClass)),
+                SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(valueClass),SerdeUtils.getJSONDeSerializer(valueClass)))
+                
+                .aggregate( 
+                        ArrayList::new, 
+                        (key, value, aggregate) -> { 
+                            aggregate.add(value); 
+                            return aggregate; 
+                        }, 
+                        new ArrayListSerde<>(SerdeUtils.gerJsonSerde(SerdeUtils.getJSONSerializer(valueClass),SerdeUtils.getJSONDeSerializer(valueClass)))
+                ); 
+        
+    } 
 
-	/**
-	 * create KTable from Grouped aggregated Data from ClaimPayment
-	 * @param claimPaymentKStream
-	 * @return KTable
-	 * @throws IllegalAccessException
-	 * @throws InstantiationException
-	 */
-
-	private KTable<String, ClaimPaymentList> aggregateClaimPaymentGroupedData(KStream<String, ClaimPayment> claimPaymentKStream) throws IllegalAccessException, InstantiationException {
-		return claimPaymentKStream.groupBy((k, payment) -> payment.CLAIMNUMBER, Constants.stringSerde, 
-		JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(ClaimPayment.class),JSONSerdeUtils.getJSONDeSerializer(ClaimPayment.class)))
-		.aggregate(ClaimPaymentList::new, (ClaimPaykey, ClaimPay, claimpayList) -> {
-				claimpayList.ClaimPaymentRecord.add(ClaimPay);
-				return claimpayList;
-		}, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(ClaimPaymentList.class),
-		JSONSerdeUtils.getJSONDeSerializer(ClaimPaymentList.class)), Constants.PAYMENT_STORE);
-		
-	}
-
-	/**
-	 * create KTable from Grouped aggregated Data from Claim
-	 * @param claimStream
-	 * @return KTable
-	 * @throws IllegalAccessException
-	 * @throws InstantiationException
-	 */
-	
-	private KTable<String, ClaimList> aggregateClaimGrupedData(KStream<String, Claim> claimStream) throws IllegalAccessException, InstantiationException {
-		return claimStream.groupBy((k, claim) -> claim.CLAIMNUMBER, Constants.stringSerde, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(Claim.class),
-		JSONSerdeUtils.getJSONDeSerializer(Claim.class))).aggregate(ClaimList::new, (claimKey, claimMsg, claimLst) -> {
-			claimLst.claimRecords.add(claimMsg); return (claimLst);
-		}, JSONSerdeUtils.gerJsonSerde(JSONSerdeUtils.getJSONSerializer(ClaimList.class), JSONSerdeUtils.getJSONDeSerializer(ClaimList.class)), Constants.CLAIM_STORE);
-		 
-	}
 	
 	/**
 	 * Get and properly arrange the Customer data 
 	 * @param KTable finalData
 	 * @return KTable 
 	 */
-	
-	private KTable<Integer, CustomerView> createDataView(KTable<Integer, CustomerPolicyClaimPayment> finalData) {
+
+	private KTable<String, CustomerView> createDataView1(KTable<String, CustomerPolicyClaimPayment> finalData) {
 		
 		return finalData.<CustomerView>mapValues((all) -> {
 			CustomerView view = new CustomerView();
-			view.cutomerKey = Integer.parseInt(	all.customerAndPolicy.customerList.CustomerRecords.get(0).CUSTOMER.
-			replaceFirst("cust", ""));
+			view.cutomerKey = 	all.customerAndPolicy.customer.iterator().next().CUSTOMER.
+			replaceFirst("cust", "");
 			for (Customer customer : all.customerAndPolicy.customerList.CustomerRecords) {
 				view.customerRecords.add(customer);
 			}
@@ -214,7 +193,12 @@ public class DataProcessor {
 		});
 
 	}
-
+	
+	
+	
+	
+	
+	
 	/**
 	 * @param 
 	 * @return predicate to validate the Customer records
@@ -271,4 +255,7 @@ public class DataProcessor {
 		};
 	}
 	
+	
 }
+
+
