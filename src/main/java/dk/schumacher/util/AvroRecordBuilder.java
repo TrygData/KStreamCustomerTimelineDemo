@@ -51,7 +51,7 @@ public class AvroRecordBuilder {
         }
 
         @JsonIgnore
-        public Map<String, FieldAbstract> _fields = new HashMap<String, FieldAbstract>();
+        private Map<String, FieldAbstract> _fields = new HashMap<String, FieldAbstract>();
 
         public Wrapper(FieldAbstract... fields) {
             for (FieldAbstract field : fields) {
@@ -67,9 +67,26 @@ public class AvroRecordBuilder {
             return new Wrapper(fields);
         }
 
+        public Wrapper setSchema(Schema schema) {
+            FieldAbstract[] fields = new FieldAbstract[schema.getFields().size()];
+            for (int i = 0; i < schema.getFields().size(); i++) {
+                fields[i] = FieldAbstract.createFromAvroSchema(schema.getFields().get(i));
+            }
+            for (FieldAbstract field : fields) {
+                this._fields.put(field.name, field);
+            }
+            return this;
+        }
+
         @JsonProperty
         public Collection<FieldAbstract> getFields() {
             return _fields.values();
+        }
+
+        public void setFields(Collection<FieldAbstract> fields) {
+            for (FieldAbstract field : fields) {
+                this._fields.put(field.name, field);
+            }
         }
 
         /**

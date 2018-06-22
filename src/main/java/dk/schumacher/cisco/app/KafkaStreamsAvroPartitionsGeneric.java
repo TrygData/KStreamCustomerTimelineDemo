@@ -50,29 +50,30 @@ public class KafkaStreamsAvroPartitionsGeneric {
 
         KStreamBuilder kStreamBuilder = new KStreamBuilder();
 
-        KStream<Integer, GenericRecord> callDetailStream = kStreamBuilder.stream(integerSerde, valueGenericAvroSerde, TERM_CALL_DETAIL.topicName);
+        KStream<Integer, GenericRecord> callDetailStream = kStreamBuilder.stream(integerSerde, valueGenericAvroSerde, callDetailWrapper.topicName);
 
-        GlobalKTable<Integer, GenericRecord> callTypeKTable = kStreamBuilder.globalTable(integerSerde, valueGenericAvroSerde, CALL_TYPE.topicName);
+        GlobalKTable<Integer, GenericRecord> callTypeKTable = kStreamBuilder.globalTable(integerSerde, valueGenericAvroSerde, callTypeWrapper.topicName);
 
         KStream<Integer, GenericRecord> callDetailAndTypeType = callDetailStream.leftJoin(callTypeKTable,
                 (key, val) -> (Integer)val.get("callTypeId"),
                 (callDetailValue, callTypeValue) -> decodeWholeAvroMessageAvro(callDetailValue, callTypeValue));
         callDetailAndTypeType.print();
-        callDetailAndTypeType.to(CISCO_WHOLE.topicName);
+        callDetailAndTypeType.to(ciscoWholeWrapper.topicName);
 
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.cleanUp();
         kafkaStreams.start();
     }
 
-    static private AvroRecordBuilder.Wrapper callDetailWrapper = null;
-    static private AvroRecordBuilder.Wrapper callTypeWrapper = null;
-    static private AvroRecordBuilder.Wrapper ciscoWholeWrapper = null;
+    static private AvroRecordBuilder.Wrapper callDetailWrapper = new AvroRecordBuilder.Wrapper().setTopicName("TermCallDetailX");
+    static private AvroRecordBuilder.Wrapper callTypeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("CallType2");
+    static private AvroRecordBuilder.Wrapper ciscoWholeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole2");
+
     public static GenericRecord decodeWholeAvroMessageAvro(GenericRecord callDetail, GenericRecord callType)  {
         if(ciscoWholeWrapper == null) {
-            callDetailWrapper = AvroRecordBuilder.Wrapper.createFromAvroSchema(callDetail.getSchema());
-            callTypeWrapper = AvroRecordBuilder.Wrapper.createFromAvroSchema(callType.getSchema());
-            ciscoWholeWrapper = callDetailWrapper.mergeSchema(callTypeWrapper);
+            callDetailWrapper.setSchema(callDetail.getSchema());
+            callTypeWrapper.setSchema(callType.getSchema());
+            ciscoWholeWrapper.setFields(callDetailWrapper.mergeSchema(callTypeWrapper).getFields());
         }
         GenericRecord ciscoWhole=ciscoWholeWrapper.copyFields(callDetail, callType);
         System.out.println("ciscoWholeWrapper: " + ciscoWholeWrapper);
