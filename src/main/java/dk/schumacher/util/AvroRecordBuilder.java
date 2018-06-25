@@ -142,7 +142,7 @@ public class AvroRecordBuilder {
             }
         }
 
-        public GenericRecord copyFields(GenericRecord from1, GenericRecord from2) {
+        public GenericRecord copyFieldsFrom(GenericRecord from1, GenericRecord from2) {
             GenericRecord out = getGenericRecord();
             for (FieldAbstract field : _fields.values()) {
                 if(from1.get(field.name) != null)

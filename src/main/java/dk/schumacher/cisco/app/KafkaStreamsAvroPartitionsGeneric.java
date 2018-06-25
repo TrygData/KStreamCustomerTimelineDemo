@@ -18,8 +18,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Properties;
 
-import static dk.schumacher.cisco.model.ConstantsGeneric.*;
-
 /*
 Demos how to make a join with partitioned topics.
 
@@ -54,30 +52,54 @@ public class KafkaStreamsAvroPartitionsGeneric {
 
         GlobalKTable<Integer, GenericRecord> callTypeKTable = kStreamBuilder.globalTable(integerSerde, valueGenericAvroSerde, callTypeWrapper.topicName);
 
-        KStream<Integer, GenericRecord> callDetailAndTypeType = callDetailStream.leftJoin(callTypeKTable,
+        GlobalKTable<Integer, GenericRecord> agentTeamMemberKTable = kStreamBuilder.globalTable(integerSerde, valueGenericAvroSerde, agentTeamMemberWrapper.topicName);
+
+        // Add CallType
+        KStream<Integer, GenericRecord> ciscoWhole1 = callDetailStream.leftJoin(callTypeKTable,
                 (key, val) -> (Integer)val.get("callTypeId"),
                 (callDetailValue, callTypeValue) -> decodeWholeAvroMessageAvro(callDetailValue, callTypeValue));
-        callDetailAndTypeType.print();
-        callDetailAndTypeType.to(ciscoWholeWrapper.topicName);
+        ciscoWhole1.print();
+        ciscoWhole1.to(ciscoWhole1Wrapper.topicName);
 
+        // Add AgentTeamMember
+        KStream<Integer, GenericRecord> ciscoWhole2 = ciscoWhole1.leftJoin(agentTeamMemberKTable,
+                (key, val) -> (Integer)val.get("skillTargetID"),
+                (whole1, agentTeamMember) -> decodeWholeAvroMessageAvro2(whole1, agentTeamMember));
+        ciscoWhole2.print();
+        ciscoWhole2.to(ciscoWhole2Wrapper.topicName);
+
+        // Start stream
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
         kafkaStreams.cleanUp();
         kafkaStreams.start();
     }
 
-    static private AvroRecordBuilder.Wrapper callDetailWrapper = new AvroRecordBuilder.Wrapper().setTopicName("TermCallDetailX");
-    static private AvroRecordBuilder.Wrapper callTypeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("CallType2");
-    static private AvroRecordBuilder.Wrapper ciscoWholeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole2");
+    static private AvroRecordBuilder.Wrapper callDetailWrapper = new AvroRecordBuilder.Wrapper().setTopicName("TermCallDetail");
+    static private AvroRecordBuilder.Wrapper callTypeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("CallType");
+    static private AvroRecordBuilder.Wrapper ciscoWhole1Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole1");
 
     public static GenericRecord decodeWholeAvroMessageAvro(GenericRecord callDetail, GenericRecord callType)  {
-        if(ciscoWholeWrapper == null) {
+        if(ciscoWhole1Wrapper == null) {
             callDetailWrapper.setSchema(callDetail.getSchema());
             callTypeWrapper.setSchema(callType.getSchema());
-            ciscoWholeWrapper.setFields(callDetailWrapper.mergeSchema(callTypeWrapper).getFields());
+            ciscoWhole1Wrapper.setFields(callDetailWrapper.mergeSchema(callTypeWrapper).getFields());
         }
-        GenericRecord ciscoWhole=ciscoWholeWrapper.copyFields(callDetail, callType);
-        System.out.println("ciscoWholeWrapper: " + ciscoWholeWrapper);
-        return ciscoWhole;
+        GenericRecord ciscoWhole1=ciscoWhole1Wrapper.copyFieldsFrom(callDetail, callType);
+        System.out.println("ciscoWholeWrapper: " + ciscoWhole1Wrapper);
+        return ciscoWhole1;
+    }
+
+    static private AvroRecordBuilder.Wrapper agentTeamMemberWrapper = new AvroRecordBuilder.Wrapper().setTopicName("AgentTeamMember");
+    static private AvroRecordBuilder.Wrapper ciscoWhole2Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole2");
+
+    public static GenericRecord decodeWholeAvroMessageAvro2(GenericRecord whole1, GenericRecord agentTeamMember)  {
+        if(agentTeamMemberWrapper == null) {
+            agentTeamMemberWrapper.setSchema(agentTeamMember.getSchema());
+            ciscoWhole2Wrapper.setFields(ciscoWhole1Wrapper.mergeSchema(agentTeamMemberWrapper).getFields());
+        }
+        GenericRecord ciscoWhole2=ciscoWhole2Wrapper.copyFieldsFrom(whole1, agentTeamMember);
+        System.out.println("ciscoWhole2Wrapper: " + ciscoWhole2);
+        return ciscoWhole2;
     }
 
     public static Properties avroProperties(String bootstrapServers, String schemaRegistryUrl) {

@@ -21,7 +21,17 @@ public class ConstantsGeneric {
             .setTopicName("CallType2")
             .setTableName("");
 
-    public final static Wrapper CISCO_WHOLE = TERM_CALL_DETAIL.mergeSchema(CALL_TYPE).setTopicName("Whole2");
+    public final static Wrapper CISCO_WHOLE1 = TERM_CALL_DETAIL.mergeSchema(CALL_TYPE).setTopicName("Whole1");
+
+
+    public final static Wrapper AGENT_TEAM_MEMBER = new Wrapper(
+            new AvroRecordBuilder.FieldInt("agentTeamID"),
+            new AvroRecordBuilder.FieldInt("skillTargetID")
+    )
+            .setTopicName("AgentTeamMember")
+            .setTableName("");
+
+    public final static Wrapper CISCO_WHOLE2 = CISCO_WHOLE1.mergeSchema(AGENT_TEAM_MEMBER).setTopicName("Whole2");
 
     public static void main(String[] args) {
         Wrapper TERM_CALL_DETAIL = new Wrapper(
