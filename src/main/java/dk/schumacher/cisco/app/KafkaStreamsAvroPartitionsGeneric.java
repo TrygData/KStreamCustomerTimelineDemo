@@ -62,6 +62,9 @@ public class KafkaStreamsAvroPartitionsGeneric {
 
         GlobalKTable<Integer, GenericRecord> agentTeamMemberKTable = kStreamBuilder.globalTable(agentTeamMemberWrapper.topicName+"-2", Consumed.with(integerSerde, valueGenericAvroSerde));
 
+
+        GlobalKTable<Integer, GenericRecord> agentTeamKTable = kStreamBuilder.globalTable(agentTeamWrapper.topicName, Consumed.with(integerSerde, valueGenericAvroSerde));
+
         // Add CallType - Adds field enterpriseName
         KStream<Integer, GenericRecord> ciscoWhole1 = callDetailStream.leftJoin(callTypeKTable,
                 (key, val) -> (Integer)val.get("callTypeId"),
@@ -76,6 +79,14 @@ public class KafkaStreamsAvroPartitionsGeneric {
                 (whole1, agentTeamMember) -> decodeWholeAvroMessageAvro2(whole1, agentTeamMember));
         ciscoWhole2.print();
         ciscoWhole2.to(ciscoWhole2Wrapper.topicName);
+
+        // Add AgentTeam - Adds field EnterpriseName (Agent Team)
+        // This is a left join to a table on a NON PRIMARY KEY - IS THAT POSSIBLE?????
+        KStream<Integer, GenericRecord> ciscoWhole3 = ciscoWhole2.leftJoin(agentTeamKTable,
+                (key, val) -> (Integer)val.get("agentTeamID"),
+                (whole2, agentTeam) -> decodeWholeAvroMessageAvro3(whole2, agentTeam));
+        ciscoWhole3.print();
+        ciscoWhole3.to(ciscoWhole3Wrapper.topicName);
 
         // Start stream
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder.build(), config);
@@ -109,6 +120,19 @@ public class KafkaStreamsAvroPartitionsGeneric {
         GenericRecord ciscoWhole2=ciscoWhole2Wrapper.copyFieldsFrom(whole1, agentTeamMember);
         System.out.println("ciscoWhole2Wrapper: " + ciscoWhole2);
         return ciscoWhole2;
+    }
+
+    static private AvroRecordBuilder.Wrapper agentTeamWrapper = new AvroRecordBuilder.Wrapper().setTopicName("AgentTeam-4");
+    static private AvroRecordBuilder.Wrapper ciscoWhole3Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole3-4");
+
+    public static GenericRecord decodeWholeAvroMessageAvro3(GenericRecord whole2, GenericRecord agentTeam)  {
+        if(ciscoWhole3Wrapper.getFields().size() == 0) {
+            agentTeamWrapper.setSchema(agentTeam.getSchema());
+            ciscoWhole3Wrapper.setFields(ciscoWhole3Wrapper.mergeSchema(agentTeamWrapper).getFields());
+        }
+        GenericRecord ciscoWhole3=ciscoWhole3Wrapper.copyFieldsFrom(whole2, agentTeam);
+        System.out.println("ciscoWhole3Wrapper: " + ciscoWhole3);
+        return ciscoWhole3;
     }
 
     public static Properties avroProperties(String bootstrapServers, String schemaRegistryUrl) {

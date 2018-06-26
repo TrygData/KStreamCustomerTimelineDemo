@@ -14,9 +14,7 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.Random;
 
-import static dk.schumacher.cisco.model.ConstantsGeneric.AGENT_TEAM_MEMBER;
-import static dk.schumacher.cisco.model.ConstantsGeneric.CALL_TYPE;
-import static dk.schumacher.cisco.model.ConstantsGeneric.TERM_CALL_DETAIL;
+import static dk.schumacher.cisco.model.ConstantsGeneric.*;
 
 public class KafkaAvroProducerGeneric {
 
@@ -36,10 +34,13 @@ public class KafkaAvroProducerGeneric {
     kafka-topics --zookeeper localhost:2181 --delete --topic CallType-3
     kafka-topics --zookeeper localhost:2181 --delete --topic AgentTeamMember-3
     kafka-topics --zookeeper localhost:2181 --delete --topic AgentTeamMember-3-2
+    kafka-topics --zookeeper localhost:2181 --delete --topic AgentTeam-3
 
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole1
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole2
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole1-3
+    kafka-topics --zookeeper localhost:2181 --delete --topic Whole2-3
+    kafka-topics --zookeeper localhost:2181 --delete --topic Whole3-4
 
      */
 
@@ -78,9 +79,16 @@ public class KafkaAvroProducerGeneric {
             GenericRecord agentTeamMember = AGENT_TEAM_MEMBER.getGenericRecord();
             agentTeamMember.put("agentTeamID", generate_agentSkillTargetID(i)+10);
             agentTeamMember.put("skillTargetID", generate_agentSkillTargetID(i));
-            System.out.println(callType);
+            System.out.println(agentTeamMember);
             producer.send(new ProducerRecord<Integer, GenericRecord>(AGENT_TEAM_MEMBER.topicName, new Integer(i), agentTeamMember));
-            producer.send(new ProducerRecord<Integer, GenericRecord>(AGENT_TEAM_MEMBER.topicName+"-2", new Integer(i), agentTeamMember));
+            //producer.send(new ProducerRecord<Integer, GenericRecord>(AGENT_TEAM_MEMBER.topicName+"-2", new Integer(i), agentTeamMember));
+
+            // AGENT_TEAM
+            GenericRecord agentTeam = AGENT_TEAM.getGenericRecord();
+            agentTeam.put("agentTeamID", generate_agentSkillTargetID(i)+10);
+            agentTeam.put("agentTeam", "agentTeam name " + i);
+            System.out.println(agentTeam);
+            producer.send(new ProducerRecord<Integer, GenericRecord>(AGENT_TEAM.topicName, new Integer(i+10), agentTeam));
         }
 
         Thread.sleep(1000);
