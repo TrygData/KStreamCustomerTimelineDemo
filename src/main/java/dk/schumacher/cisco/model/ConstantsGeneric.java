@@ -11,27 +11,27 @@ public class ConstantsGeneric {
             new AvroRecordBuilder.FieldString("aNI"),                 // Callers number
             new AvroRecordBuilder.FieldString("digitsDialed", true)         // Called number
     )
-            .setTopicName("TermCallDetailX")
+            .setTopicName("TermCallDetail-3")
             .setTableName("");
 
     public final static Wrapper CALL_TYPE = new Wrapper(
             new AvroRecordBuilder.FieldInt("callTypeId"),
             new AvroRecordBuilder.FieldString("enterpriseName")
     )
-            .setTopicName("CallType2")
+            .setTopicName("CallType-3")
             .setTableName("");
 
-    public final static Wrapper CISCO_WHOLE1 = TERM_CALL_DETAIL.mergeSchema(CALL_TYPE).setTopicName("Whole1");
+    public final static Wrapper CISCO_WHOLE1 = TERM_CALL_DETAIL.mergeSchema(CALL_TYPE).setTopicName("Whole1-3");
 
 
     public final static Wrapper AGENT_TEAM_MEMBER = new Wrapper(
             new AvroRecordBuilder.FieldInt("agentTeamID"),
             new AvroRecordBuilder.FieldInt("skillTargetID")
     )
-            .setTopicName("AgentTeamMember")
+            .setTopicName("AgentTeamMember-3")
             .setTableName("");
 
-    public final static Wrapper CISCO_WHOLE2 = CISCO_WHOLE1.mergeSchema(AGENT_TEAM_MEMBER).setTopicName("Whole2");
+    public final static Wrapper CISCO_WHOLE2 = CISCO_WHOLE1.mergeSchema(AGENT_TEAM_MEMBER).setTopicName("Whole2-3");
 
     public static void main(String[] args) {
         Wrapper TERM_CALL_DETAIL = new Wrapper(

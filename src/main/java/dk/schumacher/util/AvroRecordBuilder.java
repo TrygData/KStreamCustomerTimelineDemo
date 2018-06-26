@@ -36,7 +36,7 @@ public class AvroRecordBuilder {
         }
 
         @JsonIgnore
-        Schema _schema = null;
+        private Schema _schema = null;
 
         @JsonIgnore
         public Schema getSchema(){
@@ -100,6 +100,7 @@ public class AvroRecordBuilder {
                 clone = (Wrapper)this.clone();
             for (FieldAbstract field : wrapper.getFields()) {
                 clone._fields.put(field.name, field.clone());
+                System.out.println("mergeSchema new fields: " + clone._fields);
             }
             } catch (CloneNotSupportedException e) {
                 e.printStackTrace();

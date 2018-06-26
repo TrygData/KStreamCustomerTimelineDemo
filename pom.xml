@@ -35,12 +35,12 @@
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-streams</artifactId>
-      <version>0.11.0.2</version>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
-      <version>0.11.0.2</version>
+      <version>1.0.0</version>
     </dependency>
 
     <!-- Dependencies below are required/recommended only when using Apache Avro. -->

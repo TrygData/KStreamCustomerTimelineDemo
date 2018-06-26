@@ -8,11 +8,12 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.Consumed;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KStreamBuilder;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -40,60 +41,68 @@ public class KafkaStreamsAvroPartitionsGeneric {
         final String bootstrapServers = args.length > 0 ? args[0] : "localhost:9092";
         final String schemaRegistryUrl = args.length > 1 ? args[1] : "http://localhost:8081";
 
+        final String CUSTOMER_STORE = "customer-store";
+
         StreamsConfig config = new StreamsConfig(avroProperties(bootstrapServers, schemaRegistryUrl));
         final Serde<Integer> integerSerde = Serdes.Integer();
         final SpecificAvroSerde avroSerde = new SpecificAvroSerde();
         final Serde<GenericRecord> valueGenericAvroSerde = new GenericAvroSerde();
         valueGenericAvroSerde.configure(Collections.singletonMap(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl),true);
 
-        KStreamBuilder kStreamBuilder = new KStreamBuilder();
+        StreamsBuilder kStreamBuilder = new StreamsBuilder();
 
-        KStream<Integer, GenericRecord> callDetailStream = kStreamBuilder.stream(integerSerde, valueGenericAvroSerde, callDetailWrapper.topicName);
+        KStream<Integer, GenericRecord> callDetailStream = kStreamBuilder.stream(callDetailWrapper.topicName, Consumed.with(integerSerde, valueGenericAvroSerde));
 
-        GlobalKTable<Integer, GenericRecord> callTypeKTable = kStreamBuilder.globalTable(integerSerde, valueGenericAvroSerde, callTypeWrapper.topicName);
+        GlobalKTable<Integer, GenericRecord> callTypeKTable = kStreamBuilder.globalTable(callTypeWrapper.topicName, Consumed.with(integerSerde, valueGenericAvroSerde));
 
-        GlobalKTable<Integer, GenericRecord> agentTeamMemberKTable = kStreamBuilder.globalTable(integerSerde, valueGenericAvroSerde, agentTeamMemberWrapper.topicName);
+        KStream<Integer, GenericRecord> agentTeamMemberStream = kStreamBuilder.stream(agentTeamMemberWrapper.topicName, Consumed.with(integerSerde, valueGenericAvroSerde));
 
-        // Add CallType
+        // Since agentTeamID is PK in AgentTeamMember and we need to join through skillTargetID, we need to select skillTargetID as key.
+        agentTeamMemberStream.selectKey((key, value) -> (Integer)value.get("skillTargetID")).to(integerSerde, valueGenericAvroSerde,agentTeamMemberWrapper.topicName+"-2");
+
+        GlobalKTable<Integer, GenericRecord> agentTeamMemberKTable = kStreamBuilder.globalTable(agentTeamMemberWrapper.topicName+"-2", Consumed.with(integerSerde, valueGenericAvroSerde));
+
+        // Add CallType - Adds field enterpriseName
         KStream<Integer, GenericRecord> ciscoWhole1 = callDetailStream.leftJoin(callTypeKTable,
                 (key, val) -> (Integer)val.get("callTypeId"),
                 (callDetailValue, callTypeValue) -> decodeWholeAvroMessageAvro(callDetailValue, callTypeValue));
         ciscoWhole1.print();
         ciscoWhole1.to(ciscoWhole1Wrapper.topicName);
 
-        // Add AgentTeamMember
+        // Add AgentTeamMember - Adds field agentTeamID
+        // This is a left join to a table on a NON PRIMARY KEY - IS THAT POSSIBLE?????
         KStream<Integer, GenericRecord> ciscoWhole2 = ciscoWhole1.leftJoin(agentTeamMemberKTable,
-                (key, val) -> (Integer)val.get("skillTargetID"),
+                (key, val) -> (Integer)val.get("agentSkillTargetID"),
                 (whole1, agentTeamMember) -> decodeWholeAvroMessageAvro2(whole1, agentTeamMember));
         ciscoWhole2.print();
         ciscoWhole2.to(ciscoWhole2Wrapper.topicName);
 
         // Start stream
-        KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder, config);
+        KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder.build(), config);
         kafkaStreams.cleanUp();
         kafkaStreams.start();
     }
 
-    static private AvroRecordBuilder.Wrapper callDetailWrapper = new AvroRecordBuilder.Wrapper().setTopicName("TermCallDetail");
-    static private AvroRecordBuilder.Wrapper callTypeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("CallType");
-    static private AvroRecordBuilder.Wrapper ciscoWhole1Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole1");
+    static private AvroRecordBuilder.Wrapper callDetailWrapper = new AvroRecordBuilder.Wrapper().setTopicName("TermCallDetail-3");
+    static private AvroRecordBuilder.Wrapper callTypeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("CallType-3");
+    static private AvroRecordBuilder.Wrapper ciscoWhole1Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole1-3");
 
     public static GenericRecord decodeWholeAvroMessageAvro(GenericRecord callDetail, GenericRecord callType)  {
-        if(ciscoWhole1Wrapper == null) {
+        if(ciscoWhole1Wrapper.getFields().size() == 0) {
             callDetailWrapper.setSchema(callDetail.getSchema());
             callTypeWrapper.setSchema(callType.getSchema());
             ciscoWhole1Wrapper.setFields(callDetailWrapper.mergeSchema(callTypeWrapper).getFields());
         }
         GenericRecord ciscoWhole1=ciscoWhole1Wrapper.copyFieldsFrom(callDetail, callType);
-        System.out.println("ciscoWholeWrapper: " + ciscoWhole1Wrapper);
+        System.out.println("ciscoWhole1Wrapper: " + ciscoWhole1Wrapper);
         return ciscoWhole1;
     }
 
-    static private AvroRecordBuilder.Wrapper agentTeamMemberWrapper = new AvroRecordBuilder.Wrapper().setTopicName("AgentTeamMember");
-    static private AvroRecordBuilder.Wrapper ciscoWhole2Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole2");
+    static private AvroRecordBuilder.Wrapper agentTeamMemberWrapper = new AvroRecordBuilder.Wrapper().setTopicName("AgentTeamMember-3");
+    static private AvroRecordBuilder.Wrapper ciscoWhole2Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole2-3");
 
     public static GenericRecord decodeWholeAvroMessageAvro2(GenericRecord whole1, GenericRecord agentTeamMember)  {
-        if(agentTeamMemberWrapper == null) {
+        if(ciscoWhole2Wrapper.getFields().size() == 0) {
             agentTeamMemberWrapper.setSchema(agentTeamMember.getSchema());
             ciscoWhole2Wrapper.setFields(ciscoWhole1Wrapper.mergeSchema(agentTeamMemberWrapper).getFields());
         }
@@ -115,6 +124,8 @@ public class KafkaStreamsAvroPartitionsGeneric {
 
         // See: https://www.confluent.io/blog/enabling-exactly-kafka-streams/
         settings.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE);
+
+        settings.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-streams-global-tables");
 
         return settings;
     }
