@@ -35,12 +35,16 @@ public class KafkaAvroProducerGeneric {
     kafka-topics --zookeeper localhost:2181 --delete --topic AgentTeamMember-3
     kafka-topics --zookeeper localhost:2181 --delete --topic AgentTeamMember-3-2
     kafka-topics --zookeeper localhost:2181 --delete --topic AgentTeam-3
+    kafka-topics --zookeeper localhost:2181 --delete --topic Agent-1
+    kafka-topics --zookeeper localhost:2181 --delete --topic Person-1
 
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole1
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole2
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole1-3
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole2-3
     kafka-topics --zookeeper localhost:2181 --delete --topic Whole3-4
+    kafka-topics --zookeeper localhost:2181 --delete --topic Whole4-1
+    kafka-topics --zookeeper localhost:2181 --delete --topic Whole5-1
 
      */
 
@@ -89,6 +93,23 @@ public class KafkaAvroProducerGeneric {
             agentTeam.put("agentTeam", "agentTeam name " + i);
             System.out.println(agentTeam);
             producer.send(new ProducerRecord<Integer, GenericRecord>(AGENT_TEAM.topicName, new Integer(i+10), agentTeam));
+
+            // AGENT
+            GenericRecord agent = AGENT.getGenericRecord();
+            agent.put("skillTargetID", generate_agentSkillTargetID(i));
+            agent.put("personID", generate_agentSkillTargetID(i)+30);
+            agent.put("pheripheralNumber", "pheripheralNumber " + i);
+            System.out.println(agent);
+            producer.send(new ProducerRecord<Integer, GenericRecord>(AGENT.topicName, new Integer(i), agent));
+
+            // PERSON
+            GenericRecord person = PERSON.getGenericRecord();
+            person.put("personID", generate_agentSkillTargetID(i)+30);
+            person.put("firstName", "Peter " + i);
+            person.put("lastName", "Johansen " + i);
+            person.put("loginName", "LoginName " + i);
+            System.out.println(person);
+            producer.send(new ProducerRecord<Integer, GenericRecord>(PERSON.topicName, new Integer(i+30), person));
         }
 
         Thread.sleep(1000);

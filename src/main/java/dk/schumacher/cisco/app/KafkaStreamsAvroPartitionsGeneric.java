@@ -14,6 +14,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.GlobalKTable;
 import org.apache.kafka.streams.kstream.KStream;
+import sun.management.resources.agent;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -41,8 +42,6 @@ public class KafkaStreamsAvroPartitionsGeneric {
         final String bootstrapServers = args.length > 0 ? args[0] : "localhost:9092";
         final String schemaRegistryUrl = args.length > 1 ? args[1] : "http://localhost:8081";
 
-        final String CUSTOMER_STORE = "customer-store";
-
         StreamsConfig config = new StreamsConfig(avroProperties(bootstrapServers, schemaRegistryUrl));
         final Serde<Integer> integerSerde = Serdes.Integer();
         final SpecificAvroSerde avroSerde = new SpecificAvroSerde();
@@ -64,6 +63,10 @@ public class KafkaStreamsAvroPartitionsGeneric {
 
 
         GlobalKTable<Integer, GenericRecord> agentTeamKTable = kStreamBuilder.globalTable(agentTeamWrapper.topicName, Consumed.with(integerSerde, valueGenericAvroSerde));
+
+        GlobalKTable<Integer, GenericRecord> agentKTable = kStreamBuilder.globalTable(agentWrapper.topicName, Consumed.with(integerSerde, valueGenericAvroSerde));
+
+        GlobalKTable<Integer, GenericRecord> personKTable = kStreamBuilder.globalTable(personWrapper.topicName, Consumed.with(integerSerde, valueGenericAvroSerde));
 
         // Add CallType - Adds field enterpriseName
         KStream<Integer, GenericRecord> ciscoWhole1 = callDetailStream.leftJoin(callTypeKTable,
@@ -88,12 +91,27 @@ public class KafkaStreamsAvroPartitionsGeneric {
         ciscoWhole3.print();
         ciscoWhole3.to(ciscoWhole3Wrapper.topicName);
 
+        // Add Agent - Adds field personID, so we can get table Person
+        KStream<Integer, GenericRecord> ciscoWhole4 = ciscoWhole3.leftJoin(agentKTable,
+                (key, val) -> (Integer)val.get("skillTargetID"),
+                (whole3, agent) -> decodeWholeAvroMessageAvro4(whole3, agent));
+        ciscoWhole4.print();
+        ciscoWhole4.to(ciscoWhole4Wrapper.topicName);
+
+        // Add Person - Adds field firstName, lastName & loginName
+        KStream<Integer, GenericRecord> ciscoWhole5 = ciscoWhole4.leftJoin(personKTable,
+                (key, val) -> (Integer)val.get("personID"),
+                (whole4, person) -> decodeWholeAvroMessageAvro5(whole4, person));
+        ciscoWhole5.print();
+        ciscoWhole5.to(ciscoWhole5Wrapper.topicName);
+
         // Start stream
         KafkaStreams kafkaStreams = new KafkaStreams(kStreamBuilder.build(), config);
         kafkaStreams.cleanUp();
         kafkaStreams.start();
     }
 
+    // CallType
     static private AvroRecordBuilder.Wrapper callDetailWrapper = new AvroRecordBuilder.Wrapper().setTopicName("TermCallDetail-3");
     static private AvroRecordBuilder.Wrapper callTypeWrapper = new AvroRecordBuilder.Wrapper().setTopicName("CallType-3");
     static private AvroRecordBuilder.Wrapper ciscoWhole1Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole1-3");
@@ -109,6 +127,7 @@ public class KafkaStreamsAvroPartitionsGeneric {
         return ciscoWhole1;
     }
 
+    // AgentTeamMember
     static private AvroRecordBuilder.Wrapper agentTeamMemberWrapper = new AvroRecordBuilder.Wrapper().setTopicName("AgentTeamMember-3");
     static private AvroRecordBuilder.Wrapper ciscoWhole2Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole2-3");
 
@@ -122,6 +141,7 @@ public class KafkaStreamsAvroPartitionsGeneric {
         return ciscoWhole2;
     }
 
+    // AgentTeam
     static private AvroRecordBuilder.Wrapper agentTeamWrapper = new AvroRecordBuilder.Wrapper().setTopicName("AgentTeam-4");
     static private AvroRecordBuilder.Wrapper ciscoWhole3Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole3-5");
 
@@ -133,6 +153,34 @@ public class KafkaStreamsAvroPartitionsGeneric {
         GenericRecord ciscoWhole3=ciscoWhole3Wrapper.copyFieldsFrom(whole2, agentTeam);
         System.out.println("ciscoWhole3Wrapper: " + ciscoWhole3);
         return ciscoWhole3;
+    }
+
+    // Agent
+    static private AvroRecordBuilder.Wrapper agentWrapper = new AvroRecordBuilder.Wrapper().setTopicName("Agent-1");
+    static private AvroRecordBuilder.Wrapper ciscoWhole4Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole4-2");
+
+    public static GenericRecord decodeWholeAvroMessageAvro4(GenericRecord whole3, GenericRecord agent)  {
+        if(!agentWrapper.isSchemaSet()) {
+            agentWrapper.setSchema(agent.getSchema());
+            ciscoWhole4Wrapper.setFields(ciscoWhole3Wrapper.mergeSchema(agentWrapper).getFields());
+        }
+        GenericRecord ciscoWhole4=ciscoWhole4Wrapper.copyFieldsFrom(whole3, agent);
+        System.out.println("ciscoWhole4Wrapper: " + ciscoWhole4);
+        return ciscoWhole4;
+    }
+
+    // Person
+    static private AvroRecordBuilder.Wrapper personWrapper = new AvroRecordBuilder.Wrapper().setTopicName("Person-1");
+    static private AvroRecordBuilder.Wrapper ciscoWhole5Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole5-2");
+
+    public static GenericRecord decodeWholeAvroMessageAvro5(GenericRecord whole4, GenericRecord person)  {
+        if(!personWrapper.isSchemaSet()) {
+            personWrapper.setSchema(person.getSchema());
+            ciscoWhole5Wrapper.setFields(ciscoWhole4Wrapper.mergeSchema(personWrapper).getFields());
+        }
+        GenericRecord ciscoWhole5=ciscoWhole5Wrapper.copyFieldsFrom(whole4, person);
+        System.out.println("ciscoWhole5Wrapper: " + ciscoWhole5);
+        return ciscoWhole5;
     }
 
     public static Properties avroProperties(String bootstrapServers, String schemaRegistryUrl) {

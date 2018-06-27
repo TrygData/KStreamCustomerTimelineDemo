@@ -33,6 +33,7 @@ public class ConstantsGeneric {
 
     public final static Wrapper CISCO_WHOLE2 = CISCO_WHOLE1.mergeSchema(AGENT_TEAM_MEMBER).setTopicName("Whole2-3");
 
+    /////// AGENT TEAM  ///////
     public final static Wrapper AGENT_TEAM = new Wrapper(
             new AvroRecordBuilder.FieldInt("agentTeamID"),
             new AvroRecordBuilder.FieldString("agentTeam")
@@ -41,6 +42,31 @@ public class ConstantsGeneric {
             .setTableName("");
 
     public final static Wrapper CISCO_WHOLE3 = CISCO_WHOLE2.mergeSchema(AGENT_TEAM).setTopicName("Whole3-5");
+
+    /////// AGENT ///////
+    public final static Wrapper AGENT = new Wrapper(
+            new AvroRecordBuilder.FieldInt("skillTargetID"),   // PK
+            new AvroRecordBuilder.FieldInt("personID"),
+            new AvroRecordBuilder.FieldString("pheripheralNumber")
+    )
+            .setTopicName("Agent-1")
+            .setTableName("");
+
+    public final static Wrapper CISCO_WHOLE4 = CISCO_WHOLE3.mergeSchema(AGENT).setTopicName("Whole4-2");
+
+    /////// PERSON ///////
+    public final static Wrapper PERSON = new Wrapper(
+            new AvroRecordBuilder.FieldInt("personID"),   // PK
+            new AvroRecordBuilder.FieldString("firstName"),
+            new AvroRecordBuilder.FieldString("lastName"),
+            new AvroRecordBuilder.FieldString("loginName")
+    )
+            .setTopicName("Person-1")
+            .setTableName("");
+
+    public final static Wrapper CISCO_WHOLE5 = CISCO_WHOLE4.mergeSchema(PERSON).setTopicName("Whole5-2");
+
+    ///////
 
     public static void main(String[] args) {
         Wrapper TERM_CALL_DETAIL = new Wrapper(
