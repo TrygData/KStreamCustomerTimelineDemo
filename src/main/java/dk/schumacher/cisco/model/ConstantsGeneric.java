@@ -40,7 +40,7 @@ public class ConstantsGeneric {
             .setTopicName("AgentTeam-4")
             .setTableName("");
 
-    public final static Wrapper CISCO_WHOLE3 = CISCO_WHOLE2.mergeSchema(AGENT_TEAM).setTopicName("Whole3-4");
+    public final static Wrapper CISCO_WHOLE3 = CISCO_WHOLE2.mergeSchema(AGENT_TEAM).setTopicName("Whole3-5");
 
     public static void main(String[] args) {
         Wrapper TERM_CALL_DETAIL = new Wrapper(

@@ -99,7 +99,7 @@ public class KafkaStreamsAvroPartitionsGeneric {
     static private AvroRecordBuilder.Wrapper ciscoWhole1Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole1-3");
 
     public static GenericRecord decodeWholeAvroMessageAvro(GenericRecord callDetail, GenericRecord callType)  {
-        if(ciscoWhole1Wrapper.getFields().size() == 0) {
+        if(!callDetailWrapper.isSchemaSet()) {
             callDetailWrapper.setSchema(callDetail.getSchema());
             callTypeWrapper.setSchema(callType.getSchema());
             ciscoWhole1Wrapper.setFields(callDetailWrapper.mergeSchema(callTypeWrapper).getFields());
@@ -113,7 +113,7 @@ public class KafkaStreamsAvroPartitionsGeneric {
     static private AvroRecordBuilder.Wrapper ciscoWhole2Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole2-3");
 
     public static GenericRecord decodeWholeAvroMessageAvro2(GenericRecord whole1, GenericRecord agentTeamMember)  {
-        if(ciscoWhole2Wrapper.getFields().size() == 0) {
+        if(!agentTeamMemberWrapper.isSchemaSet()) {
             agentTeamMemberWrapper.setSchema(agentTeamMember.getSchema());
             ciscoWhole2Wrapper.setFields(ciscoWhole1Wrapper.mergeSchema(agentTeamMemberWrapper).getFields());
         }
@@ -123,12 +123,12 @@ public class KafkaStreamsAvroPartitionsGeneric {
     }
 
     static private AvroRecordBuilder.Wrapper agentTeamWrapper = new AvroRecordBuilder.Wrapper().setTopicName("AgentTeam-4");
-    static private AvroRecordBuilder.Wrapper ciscoWhole3Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole3-4");
+    static private AvroRecordBuilder.Wrapper ciscoWhole3Wrapper = new AvroRecordBuilder.Wrapper().setTopicName("Whole3-5");
 
     public static GenericRecord decodeWholeAvroMessageAvro3(GenericRecord whole2, GenericRecord agentTeam)  {
-        if(ciscoWhole3Wrapper.getFields().size() == 0) {
+        if(!agentTeamWrapper.isSchemaSet()) {
             agentTeamWrapper.setSchema(agentTeam.getSchema());
-            ciscoWhole3Wrapper.setFields(ciscoWhole3Wrapper.mergeSchema(agentTeamWrapper).getFields());
+            ciscoWhole3Wrapper.setFields(ciscoWhole2Wrapper.mergeSchema(agentTeamWrapper).getFields());
         }
         GenericRecord ciscoWhole3=ciscoWhole3Wrapper.copyFieldsFrom(whole2, agentTeam);
         System.out.println("ciscoWhole3Wrapper: " + ciscoWhole3);

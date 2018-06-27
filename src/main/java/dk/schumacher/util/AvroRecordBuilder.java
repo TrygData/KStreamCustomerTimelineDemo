@@ -46,6 +46,12 @@ public class AvroRecordBuilder {
         }
 
         @JsonIgnore
+        private boolean schemaSet = false;
+        public boolean isSchemaSet() {
+            return schemaSet;
+        }
+
+        @JsonIgnore
         public GenericRecord getGenericRecord(){
             return new GenericData.Record(getSchema());
         }
@@ -75,6 +81,7 @@ public class AvroRecordBuilder {
             for (FieldAbstract field : fields) {
                 this._fields.put(field.name, field);
             }
+            schemaSet = true;
             return this;
         }
 
@@ -100,7 +107,7 @@ public class AvroRecordBuilder {
                 clone = (Wrapper)this.clone();
             for (FieldAbstract field : wrapper.getFields()) {
                 clone._fields.put(field.name, field.clone());
-                System.out.println("mergeSchema new fields: " + clone._fields);
+                //System.out.println("mergeSchema new fields: " + clone._fields);
             }
             } catch (CloneNotSupportedException e) {
                 e.printStackTrace();
@@ -247,13 +254,17 @@ public class AvroRecordBuilder {
                 new FieldString("aNI"),
                 new FieldString("digitsDialed")
         );
+        System.out.println("Schema a: " + a);
+
         Wrapper b = new Wrapper(
                 new FieldInt("callTypeId"),
                 new FieldString("enterpriseName", true)
         );
+        System.out.println("Schema b: " + b);
+
         Wrapper c = a.mergeSchema(b);
         c.removeFieldNamed("callTypeId");
-        System.out.println("Schema: " + c.getSchema());
+        System.out.println("Merged Schema: " + c);
 
         c.getSchema();
         c.getGenericRecord();
